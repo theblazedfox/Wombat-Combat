@@ -173,6 +173,18 @@
     .map-name{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;font-size:.7rem;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
     .map-controls{display:flex;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid rgba(255,255,255,.12)}
 
+    /* Dice Tray (right side) */
+    .dice-panel{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--glass);backdrop-filter:blur(10px);border-left:1px solid rgba(244,208,63,.25);z-index:26;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
+    .dice-panel.open{transform:translateX(0)}
+    .dice-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:27;background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.35);border-right:none;border-radius:8px 0 0 8px;padding:8px 10px;font-weight:700;color:var(--gold);cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+    .dice-header{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .dice-tools{display:flex;gap:6px;flex-wrap:wrap}
+    .dice-canvas-wrap{position:relative;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:260px}
+    #dice-container{position:relative;width:100%;height:100%}
+    .dice-controls{display:flex;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid rgba(255,255,255,.12);flex-wrap:wrap}
+    .dice-log{max-height:140px;overflow:auto;margin:6px 10px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(0,0,0,.25)}
+    .dice-log .entry{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:.85rem}
+
     /* HP Update Modal */
     .hp-modal {
       position: fixed;
@@ -527,6 +539,9 @@
     .lib-search-input { min-width: 220px; }
     .condition-search { width: 100%; margin-bottom: 8px; }
   </style>
+  <!-- Dice-Box UMD scripts (try jsDelivr then unpkg) -->
+  <script src="https://cdn.jsdelivr.net/npm/@3d-dice/dice-box@1.1.14/dist/dice-box.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@3d-dice/dice-box@1.1.14/dist/dice-box.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="wrap">
@@ -747,6 +762,41 @@
   </div>
   <div id="battle-tab" class="battle-tab" title="Show Battle Map" style="display:block">◀ Battle Map</div>
 
+  <!-- Dice Tray Panel -->
+  <div id="dice-panel" class="dice-panel" aria-label="Dice Tray">
+    <div class="dice-header">
+      <strong style="flex:1">Dice Tray</strong>
+      <div class="dice-tools">
+        <button class="btn-line btn-small" data-dice="d4">d4</button>
+        <button class="btn-line btn-small" data-dice="d6">d6</button>
+        <button class="btn-line btn-small" data-dice="d8">d8</button>
+        <button class="btn-line btn-small" data-dice="d10">d10</button>
+        <button class="btn-line btn-small" data-dice="d12">d12</button>
+        <button class="btn-line btn-small" data-dice="d20">d20</button>
+      </div>
+      <button id="dice-close" class="btn-ghost btn-small" title="Hide">×</button>
+    </div>
+    <div class="dice-canvas-wrap">
+      <div id="dice-container"></div>
+    </div>
+    <div class="dice-controls">
+      <div id="dice-picker" class="row" style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-line btn-small" data-pick="d4">+ d4</button>
+        <button class="btn-line btn-small" data-pick="d6">+ d6</button>
+        <button class="btn-line btn-small" data-pick="d8">+ d8</button>
+        <button class="btn-line btn-small" data-pick="d10">+ d10</button>
+        <button class="btn-line btn-small" data-pick="d12">+ d12</button>
+        <button class="btn-line btn-small" data-pick="d20">+ d20</button>
+        <span id="dice-summary" class="tiny muted" style="margin-left:8px"></span>
+      </div>
+      <div style="flex:1"></div>
+      <button id="dice-clear" class="btn-ghost">Clear</button>
+      <button id="dice-roll" class="btn-primary">Roll</button>
+    </div>
+    <div id="dice-log" class="dice-log" aria-label="Dice results log"></div>
+  </div>
+  <div id="dice-tab" class="dice-tab" title="Show Dice Tray" style="display:block">Dice ▶</div>
+
   <!-- HP Update Modal -->
   <div id="hp-modal" class="hp-modal">
     <div class="hp-modal-content">
@@ -760,6 +810,117 @@
   </div>
 
   <script>
+    // ================= DICE TRAY (Dice-Box static include on GH Pages) =================
+    (function initDiceOnReady(){
+      if(window.DiceBox){ initDiceTray(); } else { window.addEventListener('load', ()=> initDiceTray()); }
+      // Asset base for GH Pages
+      window._diceAssetBase = 'https://unpkg.com/@3d-dice/dice-box@1.1.14/dist/';
+    })();
+
+    let diceBox = null;
+    let diceReady = false;
+    let picked = [];
+    function initDiceTray(){
+      const panel = document.getElementById('dice-panel');
+      const tab = document.getElementById('dice-tab');
+      const container = document.getElementById('dice-container');
+      const log = document.getElementById('dice-log');
+      const open = localStorage.getItem('diceOpen')==='1';
+      function setOpen(v){ panel.classList.toggle('open', v); tab.style.display = v? 'none':'block'; localStorage.setItem('diceOpen', v?'1':'0'); resizeDice(); }
+      document.getElementById('dice-close').addEventListener('click', ()=> setOpen(false));
+      tab.addEventListener('click', ()=> setOpen(true));
+      setOpen(open);
+
+      // Init engine if available (Dice-Box expects a container)
+      try{
+        const DiceCtor = window.DiceBox || window.DiceBoxEs;
+        if(DiceCtor){
+          const distBase = window._diceAssetBase || 'https://unpkg.com/@3d-dice/dice-box@1.1.14/dist/';
+          diceBox = new DiceCtor({
+            container: '#dice-container',
+            assetPath: 'assets/',
+            origin: distBase,
+            themeColor: '#f4d03f',
+            lightIntensity: 0.9,
+            ambientLight: 0.6,
+            gravity: 9.8,
+            scale: 8,
+          });
+          diceBox.init().then(()=>{
+            diceReady = true;
+            // Hook roll complete to log results
+            if(typeof diceBox.onRollComplete === 'function'){
+              diceBox.onRollComplete = (res)=>{
+                try{
+                  const total = Array.isArray(res?.rolls) ? res.rolls.reduce((a,r)=>a+(r.total||0),0) : (res?.total||'');
+                  if(total!=='') logEntry(`[complete] → ${total}`);
+                }catch{}
+              };
+            }
+            resizeDice();
+          }).catch(err=>{ console.warn('Dice init failed', err); });
+        } else if(window.FantasticDice){
+          // fallback to FantasticDice if present
+          diceBox = new window.FantasticDice.Engine({ canvas: container });
+          diceReady = true; resizeDice();
+        }
+      }catch(e){ console.warn('Dice init error', e); }
+
+      function resizeDice(){
+        if(!container) return; const wrap = container.parentElement.getBoundingClientRect();
+        container.style.width = Math.max(100, Math.floor(wrap.width))+'px';
+        container.style.height = Math.max(100, Math.floor(wrap.height))+'px';
+        if(diceBox && diceBox.resize){ try{ diceBox.resize(); }catch{} }
+      }
+      window.addEventListener('resize', resizeDice);
+
+      function logEntry(text){ const div=document.createElement('div'); div.className='entry'; div.textContent=text; log.prepend(div); }
+
+      function updateSummary(){
+        const out = picked.map(x=> x).join(' + ');
+        document.getElementById('dice-summary').textContent = out || 'Pick dice to roll';
+      }
+      document.getElementById('dice-picker').addEventListener('click', (e)=>{
+        const b = e.target.closest('button[data-pick]'); if(!b) return;
+        picked.push(b.dataset.pick);
+        updateSummary();
+      });
+      document.getElementById('dice-clear').addEventListener('click', ()=>{ picked.length=0; updateSummary(); });
+      document.getElementById('dice-roll').addEventListener('click', async ()=>{
+        if(!picked.length) return;
+        const picks = picked.map(s=> '1'+s);
+        const expr = picks.join(' + ');
+        try{
+          if(diceBox && diceBox.roll){
+            if(!diceReady){ await diceBox.init(); diceReady = true; }
+            // Clear previous dice, then roll with physics
+            diceBox.clear?.();
+            let res;
+            if(picks.length <= 1){
+              res = await diceBox.roll(expr);
+            } else {
+              // add multiple dice then roll
+              for(const p of picks){ diceBox.add?.(p); }
+              res = await diceBox.roll();
+            }
+            // res may be array of rolls or object; handle both
+            let total = 0;
+            if(Array.isArray(res)){
+              total = res.reduce((sum, r)=> sum + (r?.value || r?.total || 0), 0);
+            } else if(res && Array.isArray(res.rolls)){
+              total = res.rolls.reduce((sum, r)=> sum + (r?.total || 0), 0);
+            } else if(typeof res?.total === 'number') {
+              total = res.total;
+            }
+            logEntry(`${expr} → ${total}`);
+          } else {
+            logEntry(`${expr} → rolled`);
+          }
+        }catch(err){ console.warn('Dice roll error', err); logEntry(`${expr} → rolled`); }
+        picked.length=0; updateSummary();
+      });
+      updateSummary();
+    }
     // =====================================================
     // STATE & TYPES
     // =====================================================
