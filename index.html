@@ -845,12 +845,13 @@
         if(DiceCtor){
           diceBox = new DiceCtor({
             container: '#dice-container',
-            assetPath: './assets/',
+            assetPath: 'assets/',
             themeColor: '#f4d03f',
             lightIntensity: 0.9,
             ambientLight: 0.6,
             gravity: 9.8,
             scale: 8,
+            offscreen: false,
           });
           diceBox.init().then(()=>{
             diceReady = true;
