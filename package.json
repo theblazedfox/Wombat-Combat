@@ -1,0 +1,23 @@
+{
+  "name": "combat-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theblazedfox/Wombat-Combat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/theblazedfox/Wombat-Combat/issues"
+  },
+  "homepage": "https://github.com/theblazedfox/Wombat-Combat#readme",
+  "dependencies": {
+    "@3d-dice/dice-box": "^1.1.4"
+  }
+}

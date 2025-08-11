@@ -539,9 +539,8 @@
     .lib-search-input { min-width: 220px; }
     .condition-search { width: 100%; margin-bottom: 8px; }
   </style>
-  <!-- Dice-Box UMD scripts (try jsDelivr then unpkg) -->
-  <script src="https://cdn.jsdelivr.net/npm/@3d-dice/dice-box@1.1.14/dist/dice-box.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@3d-dice/dice-box@1.1.14/dist/dice-box.min.js" crossorigin="anonymous"></script>
+  <!-- Dice-Box UMD (local vendor copy for GitHub Pages) -->
+  <script src="./vendor/dice-box/dice-box.min.js" defer></script>
 </head>
 <body>
   <div class="wrap">
@@ -810,11 +809,9 @@
   </div>
 
   <script>
-    // ================= DICE TRAY (Dice-Box static include on GH Pages) =================
+    // ================= DICE TRAY (Local UMD for GH Pages) =================
     (function initDiceOnReady(){
-      if(window.DiceBox){ initDiceTray(); } else { window.addEventListener('load', ()=> initDiceTray()); }
-      // Asset base for GH Pages
-      window._diceAssetBase = 'https://unpkg.com/@3d-dice/dice-box@1.1.14/dist/';
+      window.addEventListener('DOMContentLoaded', ()=> initDiceTray());
     })();
 
     let diceBox = null;
@@ -833,13 +830,11 @@
 
       // Init engine if available (Dice-Box expects a container)
       try{
-        const DiceCtor = window.DiceBox || window.DiceBoxEs;
+        const DiceCtor = window.DiceBox;
         if(DiceCtor){
-          const distBase = window._diceAssetBase || 'https://unpkg.com/@3d-dice/dice-box@1.1.14/dist/';
           diceBox = new DiceCtor({
             container: '#dice-container',
-            assetPath: 'assets/',
-            origin: distBase,
+            assetPath: './assets/',
             themeColor: '#f4d03f',
             lightIntensity: 0.9,
             ambientLight: 0.6,
@@ -893,26 +888,14 @@
         try{
           if(diceBox && diceBox.roll){
             if(!diceReady){ await diceBox.init(); diceReady = true; }
-            // Clear previous dice, then roll with physics
             diceBox.clear?.();
-            let res;
             if(picks.length <= 1){
-              res = await diceBox.roll(expr);
+              await diceBox.roll(expr);
             } else {
-              // add multiple dice then roll
               for(const p of picks){ diceBox.add?.(p); }
-              res = await diceBox.roll();
+              await diceBox.roll();
             }
-            // res may be array of rolls or object; handle both
-            let total = 0;
-            if(Array.isArray(res)){
-              total = res.reduce((sum, r)=> sum + (r?.value || r?.total || 0), 0);
-            } else if(res && Array.isArray(res.rolls)){
-              total = res.rolls.reduce((sum, r)=> sum + (r?.total || 0), 0);
-            } else if(typeof res?.total === 'number') {
-              total = res.total;
-            }
-            logEntry(`${expr} → ${total}`);
+            logEntry(`${expr} → rolled`);
           } else {
             logEntry(`${expr} → rolled`);
           }
