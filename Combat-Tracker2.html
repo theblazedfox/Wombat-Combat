@@ -1,0 +1,2291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BG3 Initiative Tracker — DM + Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* =====================================================
+       THEME & BASE
+       ===================================================== */
+    :root{
+      --gold:#f4d03f; --gold-soft:rgba(244,208,63,.25);
+      --ink:#0a0a0a; --ink-2:#1a1a2e; --ink-3:#16213e;
+      --good:#27ae60; --ally:#3498db; --warn:#f39c12; --bad:#e74c3c;
+      --glass:rgba(0,0,0,.35);
+      --blue-key:#1900ff; /* OBS chroma-key color */
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,var(--ink) 0%,var(--ink-2) 50%,var(--ink-3) 100%);color:#e0e0e0;overflow-y:auto}
+    h1,h2,h3{font-family:'Cinzel',serif;color:var(--gold);text-shadow:0 0 10px rgba(244,208,63,.3)}
+    h1{font-size:2rem}
+    .wrap{max-width:1280px;margin:0 auto;padding:20px;display:grid;gap:16px;/* keep a margin so DM side panel doesn't overlap */ margin-right:452px; padding-bottom:260px}
+    .card{background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.15);border-radius:12px;padding:16px}
+    .header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .muted{color:#b8c5d6}
+    .row{display:flex;gap:12px;align-items:center}
+    .col{display:flex;flex-direction:column;gap:10px}
+    .grid{display:grid;gap:12px}
+    .grid-2{grid-template-columns:360px 1fr}
+    .grid-2.single{grid-template-columns:1fr}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.15);font-size:.8rem}
+
+    button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;font-weight:600;letter-spacing:.3px;transition:.2s}
+    .btn-primary{background:linear-gradient(135deg,var(--gold) 0%,#f39c12 100%);color:#1a1a2e;box-shadow:0 4px 12px rgba(244,208,63,.35)}
+    .btn-primary:hover{transform:translateY(-1px)}
+    .btn-ghost{background:rgba(244,208,63,.12);color:var(--gold);border:1px solid var(--gold-soft)}
+    .btn-ghost:hover{background:rgba(244,208,63,.22)}
+    .btn-line{background:transparent;border:1px solid rgba(255,255,255,.2);color:#e0e0e0}
+    .btn-small{padding:6px 8px;border-radius:6px;font-size:.85rem}
+    input,select{background:rgba(0,0,0,.55);color:#e0e0e0;border:1px solid rgba(244,208,63,.25);border-radius:8px;padding:10px}
+    input[type="number"]{width:110px}
+    input[type="file"]{border:0;padding:0}
+
+    /* =====================================================
+       LIBRARY + ENCOUNTER BUILDER
+       ===================================================== */
+    .sidebar{display:none;flex-direction:column;gap:12px}
+    .list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto;padding:8px;background:rgba(0,0,0,.25);border-radius:10px;border:1px dashed rgba(255,255,255,.15)}
+    /* Library bottom panel overrides to remove inner scrollbar */
+    #lib-list{max-height:none;overflow:visible}
+    .library-panel .list{border-style:solid}
+    .library-panel .lib-item{padding:12px}
+    .library-panel .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .library-panel .lib-item .row{flex-wrap:wrap}
+    .library-panel .lib-left{min-width:280px}
+    .library-panel .lib-item strong{font-size:1.05rem}
+    .library-panel .action-bar{display:grid;grid-template-columns:repeat(3, minmax(140px,1fr));gap:8px}
+    .library-panel .action-bar > *{width:100%}
+    .library-panel label.btn-line input[type="file"]{display:none}
+    @media (max-width:980px){
+      .library-panel .action-bar{grid-template-columns:1fr 1fr}
+    }
+    .library-panel .folder-bar{flex-wrap:wrap}
+    .library-panel .folder-select{min-width:220px}
+    .library-panel h3{font-size:1.4rem}
+    .library-panel .create-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .library-panel{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+    .lib-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12)}
+    .lib-left{display:flex;align-items:center;gap:8px}
+    .avatar{width:36px;height:36px;border-radius:8px;object-fit:cover;border:2px solid rgba(255,255,255,.15)}
+    .type-pill{font-size:.75rem;padding:2px 6px;border-radius:6px}
+    .P{background:rgba(39,174,96,.2);border:1px solid rgba(39,174,96,.35)}
+    .E{background:rgba(231,76,60,.2);border:1px solid rgba(231,76,60,.35)}
+    .A{background:rgba(52,152,219,.2);border:1px solid rgba(52,152,219,.35)}
+    .N{background:rgba(243,156,18,.2);border:1px solid rgba(243,156,18,.35)}
+
+    .builder{display:flex;flex-direction:column;gap:12px}
+    .initiative-drop{min-height:120px;border:2px dashed var(--gold-soft);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .slot{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(0,0,0,.45);border:1px solid rgba(244,208,63,.18);border-left:4px solid transparent;border-radius:10px;padding:10px}
+    .slot.player{border-left-color:var(--good)}
+    .slot.enemy{border-left-color:var(--bad)}
+    .slot.ally{border-left-color:var(--ally)}
+    .slot.neutral{border-left-color:var(--warn)}
+     .slot.current-turn{box-shadow:0 0 0 2px rgba(244,208,63,.35) inset, 0 0 10px rgba(244,208,63,.25); border-left-color: var(--gold)!important}
+     .now-chip{background:var(--gold)!important;color:#111!important;font-weight:800}
+    .slot .tiny{font-size:.8rem;color:#b8c5d6}
+
+    /* Folder UI */
+    .folder-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .folder-select{min-width:180px}
+
+    /* =====================================================
+       PLAYER-FACING STRIP (OBS)
+       ===================================================== */
+    .obs-strip{background:var(--blue-key);border-radius:12px;padding:24px 18px 40px;display:flex;gap:12px;align-items:flex-start;overflow-x:auto;height:190px}
+    /* Reserve per-portrait space under the name for up to 3 labels */
+    .portrait{padding-bottom:22px}
+    .portrait{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:92px}
+    .frame{width:82px;height:82px;border-radius:12px;border:3px solid #555;overflow:hidden;position:relative;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:.2s}
+    .frame.player{border-color:var(--good)}
+    .frame.enemy{border-color:var(--bad)}
+    .frame.ally{border-color:var(--ally)}
+    .frame.neutral{border-color:var(--warn)}
+    .frame.current{border-color:var(--gold);transform:scale(1.06)}
+    .img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+    .tag{position:absolute;right:4px;top:4px;background:var(--gold);color:#111;font-weight:800;border-radius:8px;font-size:.6rem;padding:2px 5px}
+    .name{max-width:82px;text-align:center;font-weight:700;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 5px rgba(0,0,0,.8)}
+
+    /* Player HP bar above portrait */
+    .hpbar{width:92px;height:10px;border:2px solid #000;border-radius:6px;background:rgba(0,0,0,.6);position:relative;overflow:hidden;margin-bottom:4px}
+    .hpbar-fill{position:absolute;left:0;top:0;bottom:0;background:#e74c3c}
+    .hpbar-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.7rem;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.7),0 0 1px rgba(0,0,0,.8)}
+    .hpbar-empty{visibility:hidden}
+
+    /* Inward pulsing outlines (kept inside the frame to avoid interfering with chroma key) */
+    .frame::after{content:"";position:absolute;inset:0;border-radius:12px;pointer-events:none;border:0}
+    @keyframes pulseRedIn{0%{box-shadow:inset 0 0 0 0 rgba(231,76,60,.95)}60%{box-shadow:inset 0 0 22px 10px rgba(231,76,60,0)}100%{box-shadow:inset 0 0 0 0 rgba(231,76,60,0)}}
+    @keyframes pulseYellowIn{0%{box-shadow:inset 0 0 0 0 rgba(243,156,18,.95)}60%{box-shadow:inset 0 0 18px 8px rgba(243,156,18,0)}100%{box-shadow:inset 0 0 0 0 rgba(243,156,18,0)}}
+    .frame.hp-quarter::after{animation:pulseRedIn 1.2s ease-in-out infinite}
+    .frame.hp-half::after{animation:pulseYellowIn 1.3s ease-in-out infinite}
+    .hp-quarter,.hp-half{transform:none}
+    /* KO overlay for portraits */
+    .ko-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+    .ko-overlay img{max-width:85%;max-height:85%;opacity:.9;filter: drop-shadow(0 0 6px rgba(0,0,0,.6));}
+
+    /* =====================================================
+       FIXED DM SIDE PANEL (no page scrolling required)
+       ===================================================== */
+    .dm-side{position:fixed;right:16px;top:16px;bottom:16px;width:420px;overflow:auto;z-index:20;background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.15);border-radius:12px;padding:12px}
+    .enemy-admin{background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px;margin-bottom:10px}
+    .enemy-admin.dm-current{box-shadow:0 0 0 2px rgba(244,208,63,.35) inset, 0 0 10px rgba(244,208,63,.25); border-color: var(--gold)!important}
+    .enemy-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .enemy-title{display:flex;align-items:center;gap:8px}
+    .enemy-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    details.sheet summary{cursor:pointer;user-select:none}
+    .sheet-img{width:100%;max-height:360px;object-fit:contain;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:#000;cursor:pointer}
+
+    @media (max-width: 980px){
+      .grid-2{grid-template-columns:1fr}
+    }
+
+    /* Keep the OBS combat bar fixed so it doesn't move when lists change height */
+    #combat-area{position:fixed;left:16px;right:452px;bottom:16px;z-index:15}
+
+    /* DM Timer (DM-visible only, outside blue bar) */
+    .dm-timer{position:fixed;top:16px;left:16px;z-index:25;display:flex;flex-direction:column;gap:8px;min-width:220px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.25);border-radius:12px;padding:10px; cursor:move}
+    .dm-timer .time{font-family:'Cinzel',serif;font-weight:700;font-size:1.6rem;color:var(--gold);text-shadow:0 0 8px rgba(244,208,63,.25)}
+    .dm-timer .controls{display:flex;flex-wrap:wrap;gap:6px}
+    .dm-timer .controls > *{flex:1 0 auto}
+    .dm-timer .row2{display:flex;gap:6px;align-items:center}
+    .dm-timer input[type="number"]{width:90px}
+
+    /* Sources floating sidebar */
+    .sources-panel{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:30;min-width:160px;max-width:220px;background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.25);border-radius:12px;padding:10px;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+    .sources-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .sources-body{display:flex;flex-direction:column;gap:6px}
+    .sources-tab{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:29;background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.35);border-radius:10px;padding:8px 10px;font-weight:700;color:var(--gold);cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+
+    /* Battle Map panel */
+    .battle-panel{position:fixed;left:0;top:0;bottom:0;width:520px;background:var(--glass);backdrop-filter:blur(8px);border-right:1px solid rgba(244,208,63,.25);z-index:19;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;overflow:hidden}
+    .battle-panel.open{transform:translateX(0)}
+    .battle-tab{position:fixed;left:0;top:40%;transform:translateY(-50%);background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(244,208,63,.3);border-left:none;border-radius:0 8px 8px 0;padding:8px 10px;color:var(--gold);font-weight:800;cursor:pointer;z-index:28;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+    .battle-header{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid rgba(255,255,255,.12)}
+    .battle-tools{display:flex;gap:6px;flex-wrap:wrap}
+    .battle-canvas-wrap{position:relative;flex:1;overflow:hidden;padding:10px}
+    .map-stage{position:relative;transform-origin:top left;display:inline-block}
+    #map-canvas,#map-preview{position:absolute;left:0;top:0}
+    .map-tokens{position:absolute;left:0;top:0}
+    .map-token{position:absolute;width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:#222;background-size:cover;background-position:center;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:grab}
+    .map-token.active{box-shadow:0 0 12px rgba(244,208,63,.9), 0 0 0 3px var(--gold) inset}
+    .map-name{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;font-size:.7rem;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
+    .map-controls{display:flex;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid rgba(255,255,255,.12)}
+
+    /* HP Update Modal */
+    .hp-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .hp-modal.show {
+      display: flex;
+    }
+    
+    .hp-modal-content {
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(244, 208, 63, 0.25);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+    
+    .hp-modal h3 {
+      margin-bottom: 16px;
+      color: var(--gold);
+    }
+    
+    .hp-modal input {
+      width: 100%;
+      margin-bottom: 16px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    
+    .hp-modal .buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    
+    .hp-modal .buttons button {
+      flex: 1;
+    }
+
+    /* Condition System */
+    .condition-ring {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 0 0 2px #000 inset; /* solidize edge against chroma */
+      background: transparent; /* no alpha fill */
+    }
+    
+    .condition-ring.outer {
+      width: 100%;
+      height: 100%;
+      border-width: 3px;
+      border-style: solid;
+      border-color: currentColor;
+      animation: pulse-ring 2s infinite;
+      top: 0;
+      left: 0;
+    }
+    
+    .condition-ring.inner {
+      width: 85%;
+      height: 85%;
+      top: 7.5%;
+      left: 7.5%;
+      border-width: 2px;
+      border-style: solid;
+      border-color: currentColor;
+    }
+    
+    .condition-ring.innermost {
+      width: 70%;
+      height: 70%;
+      top: 15%;
+      left: 15%;
+      border-width: 2px;
+      border-style: solid;
+      border-color: currentColor;
+    }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Condition Colors (applied via currentColor) */
+    .condition-blinded { color: #2c3e50; }
+    .condition-charmed { color: #e91e63; }
+    .condition-deafened { color: #9c27b0; }
+    .condition-exhaustion { color: #795548; }
+    .condition-frightened { color: #ff5722; }
+    .condition-grappled { color: #8d6e63; }
+    .condition-incapacitated { color: #424242; }
+    .condition-invisible { color: #ffffff; }
+    .condition-paralyzed { color: #8bc34a; }
+    .condition-petrified { color: #9e9e9e; }
+    .condition-poisoned { color: #4caf50; }
+    .condition-prone { color: #ff9800; }
+    .condition-restrained { color: #ff6d00; }
+    .condition-stunned { color: #f44336; }
+    .condition-unconscious { color: #000000; }
+    .condition-on-fire { color: #ff1744; }
+    .condition-electrocuted { color: #ffeb3b; }
+    .condition-frozen { color: #80deea; }
+    .condition-bleeding { color: #d32f2f; }
+    .condition-blessed { color: #ffd700; }
+    .condition-cursed { color: #7b1fa2; }
+    
+    /* Condition Labels */
+    .condition-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+      justify-content: center;
+    }
+    
+    .condition-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 2px solid;
+      white-space: nowrap;
+      color: #fff; /* unified white text */
+      background: #fff; /* solid background for readability; overridden below */
+      text-shadow: 0 1px 1px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.7);
+    }
+    
+    /* Condition label colors */
+    .condition-label.condition-blinded { border-color: #2c3e50; background: #2c3e50; color: #fff; }
+    .condition-label.condition-charmed { border-color: #e91e63; background: #e91e63; color: #fff; }
+    .condition-label.condition-deafened { border-color: #9c27b0; background: #9c27b0; color: #fff; }
+    .condition-label.condition-exhaustion { border-color: #795548; background: #795548; color: #fff; }
+    .condition-label.condition-frightened { border-color: #ff5722; background: #ff5722; color: #fff; }
+    .condition-label.condition-grappled { border-color: #8d6e63; background: #8d6e63; color: #fff; }
+    .condition-label.condition-incapacitated { border-color: #424242; background: #424242; color: #fff; }
+    .condition-label.condition-invisible { border-color: #ffffff; background: #ffffff; color: #000; }
+    .condition-label.condition-paralyzed { border-color: #8bc34a; background: #8bc34a; color: #000; }
+    /* Force high contrast on potentially low-contrast backgrounds */
+    /* Remove overrides that forced dark text on bright backgrounds */
+    .condition-label.condition-paralyzed,
+    .condition-label.condition-poisoned,
+    .condition-label.condition-petrified,
+    .condition-label.condition-frozen,
+    .condition-label.condition-blessed {
+      color: #fff;
+      text-shadow: 0 1px 1px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.7);
+    }
+    .condition-label.condition-petrified { border-color: #9e9e9e; background: #9e9e9e; }
+    .condition-label.condition-poisoned { border-color: #4caf50; background: #4caf50; }
+    .condition-label.condition-prone { border-color: #ff9800; background: #ff9800; }
+    .condition-label.condition-restrained { border-color: #ff6d00; background: #ff6d00; }
+    .condition-label.condition-stunned { border-color: #f44336; background: #f44336; }
+    .condition-label.condition-unconscious { border-color: #000000; background: #000000; }
+    .condition-label.condition-on-fire { border-color: #ff1744; background: #ff1744; }
+    .condition-label.condition-electrocuted { border-color: #ffeb3b; background: #ffeb3b; }
+    .condition-label.condition-frozen { border-color: #80deea; background: #80deea; }
+    .condition-label.condition-bleeding { border-color: #d32f2f; background: #d32f2f; }
+    .condition-label.condition-blessed { border-color: #ffd700; background: #ffd700; }
+    .condition-label.condition-cursed { border-color: #7b1fa2; background: #7b1fa2; color: #fff; }
+    
+    /* Unify condition label text appearance: white text with faint black outline */
+    .condition-label {
+      color: #fff !important;
+      text-shadow: 0 1px 1px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.7) !important;
+    }
+
+    /* Condition Tooltip */
+    .condition-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 400;
+      max-width: 250px;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      border: 1px solid rgba(244, 208, 63, 0.3);
+    }
+    
+    .condition-tooltip.show {
+      opacity: 1;
+    }
+    
+    /* Condition Button Styles */
+    .condition-btn {
+      padding: 4px 8px;
+      margin: 2px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid;
+      background: rgba(0, 0, 0, 0.3);
+      transition: all 0.2s;
+    }
+    
+    .condition-btn:hover {
+      transform: scale(1.05);
+    }
+    
+    .condition-btn.active {
+      box-shadow: 0 0 8px currentColor;
+    }
+    
+    /* Apply condition colors to buttons */
+    .condition-btn.condition-blinded { color: #2c3e50; border-color: #2c3e50; }
+    .condition-btn.condition-charmed { color: #e91e63; border-color: #e91e63; }
+    .condition-btn.condition-deafened { color: #9c27b0; border-color: #9c27b0; }
+    .condition-btn.condition-exhaustion { color: #795548; border-color: #795548; }
+    .condition-btn.condition-frightened { color: #ff5722; border-color: #ff5722; }
+    .condition-btn.condition-grappled { color: #607d8b; border-color: #607d8b; }
+    .condition-btn.condition-incapacitated { color: #424242; border-color: #424242; }
+    .condition-btn.condition-invisible { color: #00bcd4; border-color: #00bcd4; }
+    .condition-btn.condition-paralyzed { color: #8bc34a; border-color: #8bc34a; }
+    .condition-btn.condition-petrified { color: #9e9e9e; border-color: #9e9e9e; }
+    .condition-btn.condition-poisoned { color: #4caf50; border-color: #4caf50; }
+    .condition-btn.condition-prone { color: #ff9800; border-color: #ff9800; }
+    .condition-btn.condition-restrained { color: #3f51b5; border-color: #3f51b5; }
+    .condition-btn.condition-stunned { color: #f44336; border-color: #f44336; }
+    .condition-btn.condition-unconscious { color: #ffffff; border-color: #000000; background: #000000; }
+    .condition-btn.condition-on-fire { color: #ff1744; border-color: #ff1744; }
+    .condition-btn.condition-electrocuted { color: #ffeb3b; border-color: #ffeb3b; }
+    .condition-btn.condition-frozen { color: #00bcd4; border-color: #00bcd4; }
+    .condition-btn.condition-bleeding { color: #d32f2f; border-color: #d32f2f; }
+    .condition-btn.condition-blessed { color: #ffd700; border-color: #ffd700; }
+    .condition-btn.condition-cursed { color: #7b1fa2; border-color: #7b1fa2; }
+    
+    /* Condition Dropdown */
+    .condition-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .condition-dropdown-btn {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(244, 208, 63, 0.3);
+      color: var(--gold);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    
+    .condition-dropdown-btn:hover {
+      background: rgba(244, 208, 63, 0.1);
+    }
+    
+    .condition-dropdown-content {
+      display: none;
+      position: absolute;
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(244, 208, 63, 0.25);
+      border-radius: 8px;
+      padding: 8px;
+      z-index: 1000;
+      max-height: 200px;
+      overflow-y: auto;
+      min-width: 150px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .condition-dropdown-content.show {
+      display: block;
+    }
+    
+    .condition-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      transition: background 0.2s;
+    }
+    
+    .condition-dropdown-item:hover {
+      background: rgba(244, 208, 63, 0.1);
+    }
+    
+    .condition-dropdown-item.active {
+      background: rgba(244, 208, 63, 0.2);
+    }
+    
+    .condition-dropdown-item .condition-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid;
+      flex-shrink: 0;
+    }
+    
+    /* Scrollable Encounter Area */
+    .encounter-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    
+    .encounter-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .encounter-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+    
+    .encounter-scroll::-webkit-scrollbar-thumb {
+      background: rgba(244, 208, 63, 0.3);
+      border-radius: 4px;
+    }
+    
+    .encounter-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(244, 208, 63, 0.5);
+    }
+    
+    /* Search inputs */
+    .lib-search-input,
+    .condition-search {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(244, 208, 63, 0.3);
+      color: var(--gold);
+      padding: 8px 10px;
+      border-radius: 8px;
+      outline: none;
+    }
+    .lib-search-input::placeholder,
+    .condition-search::placeholder { color: rgba(244, 208, 63, 0.6); }
+    .lib-search-input { min-width: 220px; }
+    .condition-search { width: 100%; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- DM-only Timer -->
+    <div id="dm-timer" class="dm-timer" style="display:none">
+      <div class="time" id="dm-time">00:00</div>
+      <div class="controls">
+        <button id="timer-start" class="btn-primary btn-small">Start</button>
+        <button id="timer-pause" class="btn-line btn-small">Pause</button>
+        <button id="timer-reset" class="btn-ghost btn-small">Reset</button>
+      </div>
+      <div class="row2">
+        <label class="chip" style="gap:6px">
+          <input type="radio" name="timer-mode" value="up" id="timer-mode-up" checked /> Up
+        </label>
+        <label class="chip" style="gap:6px">
+          <input type="radio" name="timer-mode" value="down" id="timer-mode-down" /> Down
+        </label>
+        <input id="timer-seconds" type="number" placeholder="Seconds" min="0" />
+      </div>
+      <label class="chip" style="gap:6px;align-self:flex-start">
+        <input id="timer-auto-turn" type="checkbox" /> Auto reset & start on turn
+      </label>
+    </div>
+
+    
+    <div class="card header">
+      <div>
+        <h1>Initiative Tracker Setup</h1>
+        <div class="muted">Drag from Library into Encounter • Save party/NPCs • Blue strip is keyed for OBS</div>
+      </div>
+      <div class="row">
+        <button id="btn-export-state" class="btn-line">Export All</button>
+        <label class="btn-line" style="display:inline-flex;align-items:center;gap:8px;padding:10px 12px">
+          <input id="import-file" type="file" accept=".json" hidden />
+          <span>Import</span>
+        </label>
+        
+        <button id="btn-clear-all" class="btn-ghost">Clear Encounter</button>
+        <button id="btn-start" class="btn-primary">Start Combat</button>
+        <button id="btn-run-tests" class="btn-line btn-small" title="Runs internal checks">Run Self‑Tests</button>
+      </div>
+    </div>
+
+    <div class="grid grid-2 single">
+      <!-- Sidebar: Create + Library (hidden; replaced by bottom panel) -->
+      <div class="card sidebar">
+        <h3>Create Creature</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px">
+          <input id="in-name" placeholder="Name" />
+          <select id="in-type" title="Type">
+            <option value="player">Player</option>
+            <option value="enemy">Enemy</option>
+            <option value="ally">Ally</option>
+            <option value="neutral">Neutral</option>
+          </select>
+          <input id="in-ac" type="number" placeholder="AC" />
+          <input id="in-hp" type="number" placeholder="HP" />
+          <input id="in-img" placeholder="Portrait Image URL (optional)" style="grid-column:1/3" />
+          <input id="in-ddb" placeholder="D&D Beyond URL (optional)" style="grid-column:1/3" />
+          <div class="row" style="grid-column:1/3;justify-content:flex-end">
+            <button id="btn-add-lib-side" class="btn-ghost">Add to Library</button>
+          </div>
+        </div>
+
+        <div class="row" style="justify-content:space-between;align-items:center;display:none"><h3>Library</h3>
+          <div class="folder-bar">
+            <select id="folder-select-side" class="folder-select"></select>
+            <button id="btn-new-folder-side" class="btn-line btn-small">New Folder</button>
+            <button id="btn-save-lib-side" class="btn-line btn-small">Save</button>
+            <button id="btn-export-lib-side" class="btn-line btn-small">Export</button>
+            <label class="btn-line btn-small" style="display:inline-flex;align-items:center;gap:6px">
+              <input id="import-lib-side" type="file" accept=".json" hidden />
+              <span>Import</span>
+            </label>
+            <label class="btn-line btn-small" style="display:inline-flex;align-items:center;gap:6px">
+              <input id="import-creature-side" type="file" accept=".json" hidden />
+              <span>Import Creature</span>
+            </label>
+          </div>
+        </div>
+        <div id="lib-list-side" class="list" aria-label="Saved creatures" style="display:none"></div>
+      </div>
+
+      <!-- Encounter builder -->
+      <div class="card builder">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h3>Encounter (Initiative Order)</h3>
+          <div class="row">
+            <input id="scene-name" placeholder="Scene name" />
+            <button id="btn-save-scene" class="btn-line">Save Scene</button>
+            <button id="btn-export-scenes" class="btn-line">Export Scenes</button>
+            <label class="btn-line" style="display:inline-flex;align-items:center;gap:6px">
+              <input id="import-scenes" type="file" accept=".json" hidden />
+              <span>Import Scenes</span>
+            </label>
+          </div>
+        </div>
+        <div class="encounter-scroll">
+          <div id="enc-list" class="initiative-drop" aria-label="Encounter list (drop here)"></div>
+        </div>
+        <div id="scenes-list" class="list" aria-label="Saved scenes"></div>
+      </div>
+    </div>
+
+    <!-- Bottom Library Panel (moved to bottom) -->
+    <section id="library-bottom" class="card library-panel" style="margin-top:16px">
+      <div class="lib-col">
+        <h3>Library</h3>
+        <div class="folder-bar toolbar" style="margin-top:8px; gap:8px; flex-wrap: wrap; align-items:center">
+          <select id="folder-select" class="folder-select"></select>
+          <input id="lib-search" class="lib-search-input" placeholder="Search library…" />
+          <button id="btn-new-folder" class="btn-line">New Folder</button>
+          <button id="btn-save-lib" class="btn-line">Save</button>
+          <button id="btn-export-lib" class="btn-line">Export</button>
+          <label class="btn-line" style="display:inline-flex;align-items:center;gap:6px">
+            <input id="import-lib" type="file" accept=".json" hidden />
+            <span>Import</span>
+          </label>
+          <label class="btn-line" style="display:inline-flex;align-items:center;gap:6px">
+            <input id="import-creature" type="file" accept=".json" hidden />
+            <span>Import Creature</span>
+          </label>
+        </div>
+        <div id="lib-list" class="list" aria-label="Saved creatures" style="margin-top:10px"></div>
+      </div>
+
+      <div class="create-col">
+        <h3>Create Creature</h3>
+        <div class="create-grid" style="margin-top:8px">
+          <input id="in-name" placeholder="Name" />
+          <select id="in-type" title="Type">
+            <option value="player">Player</option>
+            <option value="enemy">Enemy</option>
+            <option value="ally">Ally</option>
+            <option value="neutral">Neutral</option>
+          </select>
+          <input id="in-ac" type="number" placeholder="AC" />
+          <input id="in-hp" type="number" placeholder="HP" />
+          <input id="in-img" placeholder="Portrait Image URL (optional)" style="grid-column:1/3" />
+          <input id="in-ddb" placeholder="D&D Beyond URL (optional)" style="grid-column:1/3" />
+          <div class="action-bar" style="grid-column:1/3">
+            <div></div><div></div>
+            <button id="btn-add-lib" class="btn-primary">Add to Library</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================== PLAYER-FACING STRIP ================== -->
+    <div id="combat-area" class="card" style="display:none">
+      <div class="toolbar" style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="btn-end" class="btn-ghost">End Combat</button>
+        <button id="btn-prev" class="btn-line">◀ Prev</button>
+        <button id="btn-next" class="btn-line">Next ▶</button>
+        <button id="btn-popout" class="btn-line" title="Open initiative strip in a separate window">Pop Out Strip</button>
+        <div style="flex:1"></div>
+        <div class="chip">Round <span id="round">1</span></div>
+        <div class="chip">Turn <span id="turn">1</span>/<span id="turns">-</span></div>
+      </div>
+
+      <div id="obs-strip" class="obs-strip" aria-label="Player-facing initiative strip"></div>
+    </div>
+  </div>
+
+  <!-- Fixed DM side panel (visible during combat) -->
+  <aside id="dm-side" class="dm-side" style="display:none">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3>DM Panel</h3>
+      <span class="muted">Side-fixed; keep entire page stationary</span>
+    </div>
+    <div id="dm-wrap"></div>
+  </aside>
+
+  <!-- Floating collapsible Sources sidebar -->
+  <div id="sources-panel" class="sources-panel" style="display:none">
+    <div class="sources-header">
+      <strong>Sources</strong>
+      <button id="sources-close" class="btn-ghost btn-small" title="Hide">×</button>
+    </div>
+    <div class="sources-body">
+      <button id="btn-dndb-spells" class="btn-line" title="Open D&D Beyond Spells">Spells</button>
+      <button id="btn-dndb-items" class="btn-line" title="Open D&D Beyond Magic Items">Magic Items</button>
+      <button id="btn-dndb-rules" class="btn-line" title="Open D&D Beyond Search">Rules</button>
+    </div>
+  </div>
+  <div id="sources-tab" class="sources-tab" style="display:none" title="Show Sources">Sources ▶</div>
+
+  <!-- Battle Map Panel -->
+  <div id="battle-panel" class="battle-panel" aria-label="Battle Map Panel">
+    <div class="battle-header">
+      <strong style="flex:1">Battle Map</strong>
+      <div class="battle-tools">
+        <button id="bm-tool-pen" class="btn-line btn-small">Pen</button>
+        <button id="bm-tool-rect" class="btn-line btn-small">Rect</button>
+        <button id="bm-apply" class="btn-primary btn-small">Apply</button>
+      </div>
+      <button id="bm-close" class="btn-ghost btn-small" title="Hide">×</button>
+    </div>
+    <div class="battle-canvas-wrap">
+      <div class="map-stage" id="map-stage">
+        <canvas id="map-canvas" width="1600" height="1200"></canvas>
+        <canvas id="map-preview" width="1600" height="1200"></canvas>
+        <div id="map-tokens" class="map-tokens"></div>
+      </div>
+    </div>
+    <div class="map-controls">
+      <label class="btn-line btn-small" style="display:inline-flex;gap:6px;align-items:center">
+        <input id="bm-load" type="file" accept="image/*,.json" hidden />
+        Load
+      </label>
+      <button id="bm-save" class="btn-line btn-small">Save</button>
+      <button id="bm-clear-tokens" class="btn-ghost btn-small">Clear Tokens</button>
+      <div style="flex:1"></div>
+      <span class="tiny muted">Zoom</span>
+      <input id="bm-zoom" type="range" min="50" max="200" value="100" />
+    </div>
+  </div>
+  <div id="battle-tab" class="battle-tab" title="Show Battle Map" style="display:block">◀ Battle Map</div>
+
+  <!-- HP Update Modal -->
+  <div id="hp-modal" class="hp-modal">
+    <div class="hp-modal-content">
+      <h3 id="hp-modal-title">Update HP</h3>
+      <input type="number" id="hp-modal-input" placeholder="Enter current HP" min="0" />
+      <div class="buttons">
+        <button id="hp-modal-cancel" class="btn-line">Cancel</button>
+        <button id="hp-modal-update" class="btn-primary">Update HP</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================================================
+    // STATE & TYPES
+    // =====================================================
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+    const store = {
+      // Back-compat: if old 'library' exists, we'll migrate it to folders on load
+      libraryFolders: /** @type {Folder[]} */ ([]),
+      scenes: /** @type {Scene[]} */ ([]),
+      encounter: /** @type {CreatureInstance[]} */ ([]),
+      combat:{active:false, turn:0, round:1},
+      timer:{mode:'up', seconds:0, running:false, countdownFrom:0, autoOnTurn:false},
+      map:{
+        // kept optional to preserve backward compatibility
+        strokes: [], // {tool:'pen'|'rect', points:[{x,y},...], rect:{x,y,w,h}}
+        tokens: [],  // {id, creatureId, x, y}
+        zoom: 1
+      }
+    };
+
+    /**
+     * @typedef {Object} Creature
+     * @property {string} id
+     * @property {string} name
+     * @property {'player'|'enemy'|'ally'|'neutral'} type
+     * @property {number=} ac
+     * @property {number=} hp
+     * @property {number=} maxHp
+     * @property {string=} imageUrl
+      * @property {string=} sheetImageData  // data URL; optional
+      * @property {string=} ddbUrl          // D&D Beyond URL; optional
+      * @property {string[]=} conditions    // Array of condition IDs
+     */
+
+    /** @typedef {Creature & { init?: number }} CreatureInstance */
+    /** @typedef {{id:string,name:string,items:Creature[]}} Folder */
+    /** @typedef {{id:string,name:string,items:CreatureInstance[],date:string}} Scene */
+
+    const LS_KEY = 'bg3-init-v3'; // bump key to avoid conflicting with older structure
+    // ================= DM TIMER =================
+    let timerInterval = null;
+    function formatMMSS(totalSeconds){
+      totalSeconds = Math.max(0, Math.floor(totalSeconds||0));
+      const m = String(Math.floor(totalSeconds/60)).padStart(2,'0');
+      const s = String(totalSeconds%60).padStart(2,'0');
+      return `${m}:${s}`;
+    }
+    function renderTimer(){
+      const el = document.getElementById('dm-time');
+      const seconds = store.timer.mode==='up' ? store.timer.seconds : Math.max(0, store.timer.countdownFrom - store.timer.seconds);
+      el.textContent = formatMMSS(seconds);
+    }
+
+    // ================= BATTLE MAP =================
+    let bmTool = 'pen';
+    let bmDrawing = false; let bmPoints = []; let bmRectStart=null;
+    function bmGetCtx(){ return document.getElementById('map-canvas')?.getContext('2d'); }
+    function bmGetPrev(){ return document.getElementById('map-preview')?.getContext('2d'); }
+    function bmResize(){
+      const stage = document.getElementById('map-stage'); if(!stage) return;
+      const zoom = store.map?.zoom || 1; stage.style.transform = `scale(${zoom})`;
+    }
+    function bmRedraw(){
+      const ctx = bmGetCtx(); if(!ctx) return; const c=ctx.canvas; ctx.clearRect(0,0,c.width,c.height);
+      // whiteboard background
+      // parchment-style background
+      ctx.fillStyle = '#f3efe4'; ctx.fillRect(0,0,c.width,c.height);
+      ctx.fillStyle = 'rgba(0,0,0,0.04)';
+      for(let y=0;y<c.height;y+=32){ ctx.fillRect(0,y,c.width,1); }
+      // draw strokes
+      (store.map?.strokes||[]).forEach(s=>{
+        if(s.tool==='pen'){
+          ctx.strokeStyle = '#111'; ctx.lineWidth=3; ctx.lineJoin='round'; ctx.lineCap='round';
+          ctx.beginPath(); s.points.forEach((p,i)=> i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.stroke();
+        } else if(s.tool==='rect' && s.rect){
+          ctx.strokeStyle = '#111'; ctx.lineWidth=2; ctx.strokeRect(s.rect.x, s.rect.y, s.rect.w, s.rect.h);
+        }
+      });
+      // tokens are DOM elements layered above; nothing to draw here
+    }
+    function bmApply(){
+      if(bmTool==='pen' && bmPoints.length){ store.map.strokes.push({tool:'pen', points: bmPoints.slice()}); bmPoints.length=0; }
+      if(bmTool==='rect' && bmRectStart){ const r=bmRectStart; const w=r.w, h=r.h; store.map.strokes.push({tool:'rect', rect:{x:r.x,y:r.y,w,h}}); bmRectStart=null; }
+      saveLS(); bmRedraw(); bmPreviewClear();
+    }
+    function bmPreviewClear(){ const p=bmGetPrev(); if(!p) return; const c=p.canvas; p.clearRect(0,0,c.width,c.height); }
+    function bmPointerPos(e){ const rect = bmGetCtx().canvas.getBoundingClientRect(); const t=('touches' in e)? e.touches[0]: e; return {x: t.clientX-rect.left, y: t.clientY-rect.top}; }
+    function initBattleMap(){
+      const panel = document.getElementById('battle-panel'); const tab=document.getElementById('battle-tab');
+      const open = localStorage.getItem('bmOpen')==='1'; panel.classList.toggle('open', open);
+      tab.style.display = open? 'none':'block';
+      document.getElementById('bm-close').addEventListener('click', ()=>{ panel.classList.remove('open'); tab.style.display='block'; localStorage.setItem('bmOpen','0'); });
+      tab.addEventListener('click', ()=>{ panel.classList.add('open'); tab.style.display='none'; localStorage.setItem('bmOpen','1'); });
+      document.getElementById('bm-tool-pen').addEventListener('click', ()=> bmTool='pen');
+      document.getElementById('bm-tool-rect').addEventListener('click', ()=> bmTool='rect');
+      document.getElementById('bm-apply').addEventListener('click', bmApply);
+      document.getElementById('bm-clear-tokens').addEventListener('click', ()=>{ if(!store.map) return; store.map.tokens = []; saveLS(); renderMapTokens(); });
+      const prev = bmGetPrev(); const ctx = bmGetCtx(); if(!ctx||!prev) return;
+      // pointer handlers
+      const start=(e)=>{ bmDrawing=true; const p=bmPointerPos(e); if(bmTool==='pen'){ bmPoints=[p]; } else { bmRectStart={x:p.x,y:p.y,w:0,h:0}; } e.preventDefault(); };
+      const move=(e)=>{ if(!bmDrawing) return; const p=bmPointerPos(e); const pv=bmGetPrev(); if(!pv) return; bmPreviewClear(); if(bmTool==='pen'){ bmPoints.push(p); pv.strokeStyle='#111'; pv.lineWidth=3; pv.lineJoin='round'; pv.lineCap='round'; pv.beginPath(); bmPoints.forEach((q,i)=> i?pv.lineTo(q.x,q.y):pv.moveTo(q.x,q.y)); pv.stroke(); } else { const r={x:bmRectStart.x,y:bmRectStart.y,w:p.x-bmRectStart.x,h:p.y-bmRectStart.y}; bmRectStart=r; pv.strokeStyle='#111'; pv.lineWidth=2; pv.strokeRect(r.x,r.y,r.w,r.h);} };
+      const end=()=>{ bmDrawing=false; };
+      const cEl = ctx.canvas; cEl.addEventListener('mousedown', start); cEl.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+      cEl.addEventListener('touchstart', start, {passive:false}); cEl.addEventListener('touchmove', move, {passive:false}); window.addEventListener('touchend', end);
+      // zoom
+      const z = document.getElementById('bm-zoom'); z.addEventListener('input', ()=>{ const v=Math.max(50,Math.min(200, parseInt(z.value)||100)); store.map.zoom = v/100; bmResize(); }); bmResize();
+      // initial draw
+      bmRedraw();
+      renderMapTokens();
+    }
+    function renderMapTokens(){
+      const wrap = document.getElementById('map-tokens'); if(!wrap) return; wrap.innerHTML='';
+      (store.map?.tokens||[]).forEach(t=>{
+        const el = document.createElement('div'); el.className='map-token'; el.dataset.id=t.id; el.style.left=t.x+'px'; el.style.top=t.y+'px';
+        const cre = store.encounter.find(c=>c.id===t.creatureId);
+        el.style.backgroundImage = cre?.imageUrl ? `url(${cre.imageUrl})` : '';
+        // HP bar similar to initiative for enemies/ally/neutral
+        if(cre && Number.isFinite(cre.hp)){
+          const hpCur = cre.hp; const hpMax = cre.maxHp||cre.hp; const pct = Math.max(0, Math.min(100, Math.round((hpCur/hpMax)*100)));
+          const bar = document.createElement('div'); bar.className='hpbar'; bar.style.width='44px'; bar.style.height='8px'; bar.style.transform='translate(-4px, -10px)';
+          const fill = document.createElement('div'); fill.className='hpbar-fill'; fill.style.width=pct+'%';
+          const txt = document.createElement('div'); txt.className='hpbar-text'; txt.style.fontSize='.6rem'; txt.textContent = `${hpCur}/${hpMax}`;
+          bar.appendChild(fill); bar.appendChild(txt); el.appendChild(bar);
+        }
+        // enemies/allies/neutral get labels; players hidden from map
+        if(cre && cre.type!=='player'){
+          const name = document.createElement('div'); name.className='map-name'; name.textContent = cre.name; el.appendChild(name);
+        }
+        // drag
+        let drag=false, sx=0, sy=0, sl=0, st=0;
+        el.addEventListener('mousedown', (e)=>{ drag=true; sx=e.clientX; sy=e.clientY; el.style.cursor='grabbing'; e.preventDefault(); });
+        window.addEventListener('mousemove', (e)=>{ if(!drag) return; const stage=document.getElementById('map-stage'); const scale = store.map?.zoom||1; const dx=(e.clientX-sx)/scale, dy=(e.clientY-sy)/scale; el.style.left = (t.x+dx)+'px'; el.style.top=(t.y+dy)+'px'; });
+        window.addEventListener('mouseup', ()=>{ if(!drag) return; const left=parseInt(el.style.left)||0; const top=parseInt(el.style.top)||0; t.x=left; t.y=top; drag=false; el.style.cursor='grab'; saveLS(); });
+        // only add non-players
+        if(cre?.type!=='player') wrap.appendChild(el);
+      });
+      // highlight current turn
+      const cur = store.encounter[store.combat.turn];
+      if(cur){ const tok = (store.map.tokens||[]).find(t=>t.creatureId===cur.id); if(tok){ const el = wrap.querySelector(`.map-token[data-id="${tok.id}"]`); el?.classList.add('active'); }}
+    }
+    function tickTimer(){
+      if(!store.timer.running) return;
+      store.timer.seconds += 1;
+      if(store.timer.mode==='down'){
+        const remaining = Math.max(0, store.timer.countdownFrom - store.timer.seconds);
+        if(remaining<=0){
+          // stop at zero
+          store.timer.running = false;
+          clearInterval(timerInterval); timerInterval=null;
+        }
+      }
+      renderTimer();
+    }
+    function startTimer(){
+      if(timerInterval) clearInterval(timerInterval);
+      store.timer.running = true;
+      timerInterval = setInterval(tickTimer, 1000);
+      renderTimer();
+    }
+    function pauseTimer(){ store.timer.running=false; if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
+    function resetTimer(){ store.timer.seconds = 0; renderTimer(); }
+    function initTimerUI(){
+      // controls
+      document.getElementById('timer-start').addEventListener('click', startTimer);
+      document.getElementById('timer-pause').addEventListener('click', pauseTimer);
+      document.getElementById('timer-reset').addEventListener('click', resetTimer);
+      document.getElementById('timer-mode-up').addEventListener('change', (e)=>{ if(e.target.checked){ store.timer.mode='up'; renderTimer(); }});
+      document.getElementById('timer-mode-down').addEventListener('change', (e)=>{ if(e.target.checked){ store.timer.mode='down'; renderTimer(); }});
+      const secInp = document.getElementById('timer-seconds');
+      secInp.addEventListener('input', ()=>{ const v = parseInt(secInp.value)||0; store.timer.countdownFrom = Math.max(0,v); renderTimer(); });
+      const auto = document.getElementById('timer-auto-turn');
+      auto.addEventListener('change', ()=>{ store.timer.autoOnTurn = !!auto.checked; });
+      renderTimer();
+      // make timer draggable within viewport
+      makeDraggableTimer();
+    }
+
+    function makeDraggableTimer(){
+      const el = document.getElementById('dm-timer');
+      if(!el) return;
+      // Restore last position if present
+      try{
+        const pos = JSON.parse(localStorage.getItem('dmTimerPos')||'null');
+        if(pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)){
+          el.style.left = pos.x + 'px';
+          el.style.top = pos.y + 'px';
+        }
+      }catch{}
+      let dragging = false; let startX=0, startY=0, startLeft=0, startTop=0;
+      const onDown = (e)=>{
+        // start drag on header area: allow whole card for simplicity
+        dragging = true; e.preventDefault();
+        const pt = ('touches' in e) ? e.touches[0] : e;
+        startX = pt.clientX; startY = pt.clientY;
+        const rect = el.getBoundingClientRect();
+        startLeft = rect.left; startTop = rect.top;
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp, {once:true});
+        document.addEventListener('touchmove', onMove, {passive:false});
+        document.addEventListener('touchend', onUp, {once:true});
+      };
+      const onMove = (e)=>{
+        if(!dragging) return;
+        const pt = ('touches' in e) ? e.touches[0] : e;
+        const dx = pt.clientX - startX; const dy = pt.clientY - startY;
+        const vw = window.innerWidth; const vh = window.innerHeight;
+        const rect = el.getBoundingClientRect();
+        let newLeft = startLeft + dx; let newTop = startTop + dy;
+        // constrain within viewport
+        newLeft = clamp(newLeft, 0, vw - rect.width);
+        newTop = clamp(newTop, 0, vh - rect.height);
+        el.style.left = Math.round(newLeft) + 'px';
+        el.style.top = Math.round(newTop) + 'px';
+        e.preventDefault();
+      };
+      const onUp = ()=>{
+        dragging = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('touchmove', onMove);
+        // persist position
+        try{
+          const rect = el.getBoundingClientRect();
+          localStorage.setItem('dmTimerPos', JSON.stringify({x:Math.round(rect.left), y:Math.round(rect.top)}));
+        }catch{}
+      };
+      el.addEventListener('mousedown', onDown);
+      el.addEventListener('touchstart', onDown, {passive:false});
+    }
+    function onTurnAdvanced(){
+      if(store.timer.autoOnTurn){
+        resetTimer();
+        startTimer();
+      }
+      // update token highlight
+      renderMapTokens();
+    }
+
+    // =====================================================
+    // CONDITION SYSTEM
+    // =====================================================
+    const CONDITIONS = {
+      blinded: {
+        name: 'Blinded',
+        description: "Can't see; fail sight checks; attacks against you have advantage; your attacks have disadvantage."
+      },
+      charmed: {
+        name: 'Charmed',
+        description: "Can't attack the charmer or target them with harmful effects; the charmer has advantage on social checks."
+      },
+      deafened: {
+        name: 'Deafened',
+        description: "Can't hear; fail hearing checks."
+      },
+      exhaustion: {
+        name: 'Exhausted',
+        description: 'You have levels of Exhausted. Penalty to d20 Tests equals your level; finishing a Long Rest reduces it by 1.'
+      },
+      frightened: {
+        name: 'Frightened',
+        description: "Disadvantage on checks and attacks while the source is in sight; you can't willingly move closer."
+      },
+      grappled: {
+        name: 'Grappled',
+        description: "Speed 0; ends if you're moved or if the grappler is incapacitated."
+      },
+      incapacitated: {
+        name: 'Incapacitated',
+        description: "Can't take actions or reactions."
+      },
+      invisible: {
+        name: 'Invisible',
+        description: "Unseen. Attacks against you have disadvantage; your attacks have advantage."
+      },
+      paralyzed: {
+        name: 'Paralyzed',
+        description: 'Incapacitated; speed 0; fail Strength and Dexterity saves; attacks against have advantage; hits within 5 ft are critical.'
+      },
+      petrified: {
+        name: 'Petrified',
+        description: 'Transformed into inanimate matter; incapacitated; speed 0; attacks against have advantage; immune to poison and disease.'
+      },
+      poisoned: {
+        name: 'Poisoned',
+        description: 'Disadvantage on attack rolls and ability checks.'
+      },
+      prone: {
+        name: 'Prone',
+        description: 'Crawl unless you stand. Your attacks have disadvantage; melee attacks against you have advantage (ranged have disadvantage).'
+      },
+      restrained: {
+        name: 'Restrained',
+        description: 'Speed 0; attacks against you have advantage; your attacks have disadvantage; disadvantage on Dexterity saves.'
+      },
+      stunned: {
+        name: 'Stunned',
+        description: "Incapacitated; can't move; fail Strength and Dexterity saves; attacks against have advantage."
+      },
+      unconscious: {
+        name: 'Unconscious',
+        description: "Incapacitated; prone; drop held items; fail Strength and Dexterity saves; attacks against have advantage; hits within 5 ft are critical."
+      },
+      'on-fire': {
+        name: 'On Fire',
+        description: 'A creature on fire takes 1d6 fire damage at the start of each of its turns. The creature can use its action to make a DC 10 Dexterity check to extinguish the flames.'
+      },
+      electrocuted: {
+        name: 'Electrocuted',
+        description: 'An electrocuted creature has disadvantage on attack rolls and ability checks. At the start of each of its turns, it takes 1d4 lightning damage.'
+      },
+      frozen: {
+        name: 'Frozen',
+        description: 'A frozen creature\'s speed is halved, and it has disadvantage on Dexterity saving throws. The creature can use its action to make a DC 12 Strength check to break free.'
+      },
+      bleeding: {
+        name: 'Bleeding',
+        description: 'A bleeding creature takes 1d4 damage at the start of each of its turns. The bleeding stops if the creature receives magical healing or if someone uses an action to make a DC 10 Wisdom (Medicine) check.'
+      },
+      blessed: {
+        name: 'Blessed',
+        description: 'A blessed creature has advantage on attack rolls and saving throws. This effect lasts for 1 minute or until the creature takes damage.'
+      },
+      cursed: {
+        name: 'Cursed',
+        description: 'A cursed creature has disadvantage on attack rolls and ability checks. The curse can only be removed by the remove curse spell or similar magic.'
+      }
+    };
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+    const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+    const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+    function saveLS(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(store)); }catch(e){ console.warn('Save failed', e);} }
+    function loadLS(){
+      // Try new key first
+      let data = null;
+      try{ data = JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch{}
+
+      // Migrate if missing or empty
+      if(!data){
+        // Attempt migration from v2 structure
+        try{
+          const old = JSON.parse(localStorage.getItem('bg3-init-v2')||'null');
+          if(old){ data = migrateV2ToV3(old); }
+        }catch{}
+      }
+      if(data){ Object.assign(store, data); }
+      // Ensure folders exist
+      if(!Array.isArray(store.libraryFolders) || !store.libraryFolders.length){
+        store.libraryFolders = [
+          {id: uid(), name:'Player Characters', items: []},
+          {id: uid(), name:'General', items: []}
+        ];
+      }
+    }
+
+    function migrateV2ToV3(old){
+      const folders = [
+        {id: uid(), name:'Player Characters', items: []},
+        {id: uid(), name:'General', items: []}
+      ];
+      // Old may have .library (array of creatures)
+      if(Array.isArray(old.library)){
+        old.library.forEach(c=>{ (c.type==='player'?folders[0].items:folders[1].items).push(c); });
+      }
+      return {
+        libraryFolders: folders,
+        scenes: Array.isArray(old.scenes)?old.scenes:[],
+        encounter: Array.isArray(old.encounter)?old.encounter:[],
+        combat: old.combat || {active:false,turn:0,round:1}
+      };
+    }
+
+    function downloadJSON(obj, name){
+      const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // Threshold classes for pulsing outline
+    const hpClass = (c)=>{
+      if(!(Number.isFinite(c.hp) && Number.isFinite(c.maxHp) && c.maxHp>0)) return '';
+      const ratio = c.hp / c.maxHp;
+      if(ratio <= .25) return 'hp-quarter';
+      if(ratio <= .5)  return 'hp-half';
+      return '';
+    };
+
+    // Condition helpers
+    function addCondition(creature, conditionId) {
+      if (!creature.conditions) creature.conditions = [];
+      if (!creature.conditions.includes(conditionId)) {
+        creature.conditions.push(conditionId);
+        saveLS();
+      }
+    }
+
+    function removeCondition(creature, conditionId) {
+      if (!creature.conditions) return;
+      const index = creature.conditions.indexOf(conditionId);
+      if (index > -1) {
+        creature.conditions.splice(index, 1);
+        saveLS();
+      }
+    }
+
+    function hasCondition(creature, conditionId) {
+      return creature.conditions && creature.conditions.includes(conditionId);
+    }
+
+     function renderConditionRings(container, creature) {
+      if (!creature.conditions || creature.conditions.length === 0) return;
+      
+      const rings = ['outer', 'inner', 'innermost'];
+      creature.conditions.forEach((conditionId, index) => {
+        if (index >= rings.length) return; // Max 3 rings
+        
+        const ring = document.createElement('div');
+        ring.className = `condition-ring ${rings[index]} condition-${conditionId}`;
+         // ensure ring sits above image but under tag
+         ring.style.zIndex = '5';
+        container.appendChild(ring);
+      });
+    }
+
+    function renderConditionLabels(container, creature) {
+      if (!creature.conditions || creature.conditions.length === 0) return;
+      
+      const labelsContainer = document.createElement('div');
+      labelsContainer.className = 'condition-labels';
+      
+      creature.conditions.forEach(conditionId => {
+        const label = document.createElement('span');
+        label.className = `condition-label condition-${conditionId}`;
+        label.dataset.condition = conditionId;
+        label.textContent = CONDITIONS[conditionId].name;
+        labelsContainer.appendChild(label);
+      });
+      
+      container.appendChild(labelsContainer);
+    }
+
+    let activeConditionTooltip = null;
+    function hideConditionTooltip(){
+      if(activeConditionTooltip){
+        activeConditionTooltip.classList.remove('show');
+        const el = activeConditionTooltip;
+        activeConditionTooltip = null;
+        setTimeout(()=>{ try{ el.remove(); }catch{} }, 150);
+      }
+    }
+    function showConditionTooltipAt(el, conditionId){
+      const condition = CONDITIONS[conditionId]; if(!condition) return;
+      hideConditionTooltip();
+      const tooltip = document.createElement('div');
+      tooltip.className = 'condition-tooltip';
+      tooltip.textContent = condition.description;
+      document.body.appendChild(tooltip);
+      const rect = el.getBoundingClientRect();
+      tooltip.style.left = Math.round(rect.left) + 'px';
+      tooltip.style.top = Math.round(rect.bottom + 6) + 'px';
+      requestAnimationFrame(()=> tooltip.classList.add('show'));
+      activeConditionTooltip = tooltip;
+    }
+
+    // D&D Beyond helpers
+    function normalizeUrl(url){
+      if(!url) return '';
+      const hasProto = /^https?:\/\//i.test(url);
+      return hasProto ? url : `https://${url}`;
+    }
+    function openPopupUrl(url, title){
+      try{
+        const features = 'width=1200,height=900,menubar=no,toolbar=no,location=yes,status=no,scrollbars=yes,resizable=yes';
+        const win = window.open(url, 'ExtLink_'+Date.now(), features);
+        if(!win){ alert('Popup blocked — allow popups for this page.'); }
+      }catch{}
+    }
+    function promptSetDDB(cre){
+      const current = cre.ddbUrl || 'https://www.dndbeyond.com/';
+      const val = prompt(`D&D Beyond URL for ${cre.name}:`, current);
+      if(val==null) return;
+      const url = normalizeUrl(val.trim());
+      cre.ddbUrl = url || undefined;
+      saveLS();
+      renderLibrary();
+      renderEncounter();
+    }
+
+    // HP Modal helpers
+    let currentHpCreature = null;
+    
+    function showHpModal(creature) {
+      currentHpCreature = creature;
+      const modal = document.getElementById('hp-modal');
+      const title = document.getElementById('hp-modal-title');
+      const input = document.getElementById('hp-modal-input');
+      
+      title.textContent = `Update HP for ${creature.name}`;
+      input.value = creature.hp || '';
+      input.focus();
+      input.select();
+      
+      modal.classList.add('show');
+    }
+    
+    function hideHpModal() {
+      const modal = document.getElementById('hp-modal');
+      modal.classList.remove('show');
+      currentHpCreature = null;
+    }
+    
+    function updateHpFromModal() {
+      if (!currentHpCreature) return;
+      
+      const input = document.getElementById('hp-modal-input');
+      const newHp = parseInt(input.value);
+      
+      if (isNaN(newHp) || newHp < 0) {
+        alert('Please enter a valid HP value (0 or higher)');
+        return;
+      }
+      
+      currentHpCreature.hp = newHp;
+      if (currentHpCreature.maxHp === null || currentHpCreature.maxHp === undefined) {
+        currentHpCreature.maxHp = newHp;
+      }
+      
+      saveLS();
+      renderEncounter();
+      if (store.combat.active) {
+        renderStrip();
+        renderDM();
+      }
+      
+      hideHpModal();
+    }
+
+    // Folder helpers
+    const getFolderById = (fid) => store.libraryFolders.find(f=>f.id===fid);
+    const listAllCreatures = () => store.libraryFolders.flatMap(f=>f.items);
+
+    // UI state (not persisted)
+    let currentFolderId = null;
+    let shouldAutoFocusEncounter = false;
+
+    // =====================================================
+    // LIBRARY (FOLDERED)
+    // =====================================================
+    function ensureFolderSelected(){
+      if(!currentFolderId){ currentFolderId = store.libraryFolders[0]?.id; }
+    }
+
+    function renderFolderSelect(){
+      ensureFolderSelected();
+      const sel = document.getElementById('folder-select'); sel.innerHTML='';
+      store.libraryFolders.forEach(f=>{
+        const opt = document.createElement('option'); opt.value=f.id; opt.textContent=f.name; if(f.id===currentFolderId) opt.selected=true; sel.appendChild(opt);
+      });
+    }
+
+    function renderLibrary(){
+      renderFolderSelect();
+      const list = document.getElementById('lib-list'); list.innerHTML = '';
+      const folder = getFolderById(currentFolderId); if(!folder) return;
+      folder.items.forEach(cre => {
+        const item = document.createElement('div'); item.className='lib-item';
+        item.draggable = true; item.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain', JSON.stringify({kind:'lib', id:cre.id}));});
+        item.innerHTML = `
+          <div class="lib-left">
+            <img class="avatar" src="${cre.imageUrl||'https://via.placeholder.com/64x64?text=?'}" alt="" onerror="this.style.display='none'"/>
+            <div class="col">
+              <div class="row" style="gap:6px">
+                <strong>${cre.name}</strong>
+                <span class="type-pill ${cre.type[0].toUpperCase()}">${cre.type}</span>
+              </div>
+              <div class="row tiny" style="gap:10px">
+                ${Number.isFinite(cre.hp)?`<span class="chip">HP ${cre.hp}/${cre.maxHp||cre.hp}</span>`:''}
+                ${Number.isFinite(cre.ac)?`<span class="chip">AC ${cre.ac}</span>`:''}
+                ${cre.ddbUrl?`<span class="chip">DDB</span>`:''}
+                ${cre.sheetImageData && cre.type!=='player'?`<span class="chip">Sheet</span>`:''}
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <select class="btn-small btn-line" data-act="move">
+              ${store.libraryFolders.map(f=>`<option value="${f.id}" ${f.id===currentFolderId?'selected':''}>${f.name}</option>`).join('')}
+            </select>
+            <button class="btn-small btn-line" data-act="add">Add</button>
+            <button class="btn-small btn-ghost" data-act="del">Delete</button>
+            <button class="btn-small btn-line" data-act="ddb">Set D&D Beyond Link</button>
+            <button class="btn-small btn-line" data-act="export">Export</button>
+            ${cre.type!=='player'?`
+              <label class="btn-small btn-line" data-act="sheet-upload" style="display:inline-flex;align-items:center;gap:6px">
+                <input type="file" accept="image/*" hidden />
+                <span>Upload Sheet</span>
+              </label>
+              <button class="btn-small btn-ghost" data-act="sheet-clear">Clear Sheet</button>
+            `:''}
+          </div>`;
+        item.addEventListener('change',(e)=>{
+          const sel=e.target.closest('select[data-act="move"]'); if(!sel) return;
+          const toId = sel.value; if(toId===currentFolderId) return;
+          moveCreatureToFolder(cre.id, currentFolderId, toId);
+        });
+        item.addEventListener('click', (e)=>{
+          const act = e.target.closest('button')?.dataset.act; if(!act) return;
+          if(act==='add'){ promptAddFromLibrary(cre); }
+          if(act==='del'){ const f=getFolderById(currentFolderId); f.items = f.items.filter(x=>x.id!==cre.id); saveLS(); renderLibrary(); }
+          if(act==='ddb'){ promptSetDDB(cre); }
+          if(act==='export'){ downloadJSON(cre, `${cre.name.replace(/[^a-z0-9-_]/gi,'_')||'creature'}.json`); }
+          if(act==='sheet-clear' && cre.type!=='player'){ delete cre.sheetImageData; saveLS(); renderLibrary(); }
+        });
+        // handle sheet upload change (if present)
+        const fileInput = item.querySelector('label[data-act="sheet-upload"] input[type="file"]');
+        if(fileInput){
+          fileInput.addEventListener('change',(ev)=>{
+            const f = ev.target.files?.[0]; if(!f) return;
+            const rd = new FileReader();
+            rd.onload = ()=>{ cre.sheetImageData = rd.result; saveLS(); renderLibrary(); };
+            rd.readAsDataURL(f);
+          });
+        }
+        list.appendChild(item);
+      });
+    }
+
+    function moveCreatureToFolder(creId, fromId, toId){
+      const from = getFolderById(fromId); const to = getFolderById(toId); if(!from||!to) return;
+      const idx = from.items.findIndex(x=>x.id===creId); if(idx<0) return; const [it] = from.items.splice(idx,1); to.items.push(it);
+      saveLS(); renderLibrary();
+    }
+
+    function promptAddFromLibrary(cre){
+      const initRaw = prompt(`Initiative for ${cre.name}?`, '10'); if(initRaw===null) return;
+      const init = Number.parseInt(initRaw||''); if(!Number.isFinite(init)) return;
+      const copy = JSON.parse(JSON.stringify(cre));
+      copy.id = uid(); // ensure unique id per encounter instance
+      copy.init = init;
+      if(copy.maxHp==null && copy.hp!=null) copy.maxHp = copy.hp;
+      store.encounter.push(copy); sortEncounter(); saveLS(); renderEncounter();
+    }
+
+    // New folder
+    function newFolder(){
+      const name = prompt('Folder name?'); if(!name) return;
+      const f = {id:uid(), name, items:[]}; store.libraryFolders.push(f); currentFolderId = f.id; saveLS(); renderLibrary();
+    }
+
+    // Add creature from form → goes into current folder
+    function addCreatureFromForm(){
+      // Prefer fields inside bottom library panel to avoid duplicate-ID issues
+      const root = document.getElementById('library-bottom') || document;
+      const name = root.querySelector('#in-name')?.value.trim(); if(!name) return alert('Name required');
+      const type = root.querySelector('#in-type')?.value;
+      const hp = Number.parseInt(root.querySelector('#in-hp')?.value||'');
+      const ac = Number.parseInt(root.querySelector('#in-ac')?.value||'');
+      const img = root.querySelector('#in-img')?.value.trim()||'';
+      const ddb = root.querySelector('#in-ddb')?.value.trim()||'';
+      /** @type {Creature} */
+      const creature={id:uid(),name,type,imageUrl:img||undefined, ddbUrl: ddb||undefined};
+      if(Number.isFinite(hp)){ creature.hp=hp; creature.maxHp=hp; }
+      if(Number.isFinite(ac)){ creature.ac=ac; }
+      ensureFolderSelected();
+      const folder = getFolderById(currentFolderId) || store.libraryFolders[0];
+      if(!folder){ alert('No library folder available. Create one first.'); return; }
+      folder.items.push(creature); saveLS(); renderLibrary();
+      const nameEl = root.querySelector('#in-name'); if(nameEl) nameEl.value='';
+      const hpEl = root.querySelector('#in-hp'); if(hpEl) hpEl.value='';
+      const acEl = root.querySelector('#in-ac'); if(acEl) acEl.value='';
+      const imgEl = root.querySelector('#in-img'); if(imgEl) imgEl.value='';
+      const ddbEl = root.querySelector('#in-ddb'); if(ddbEl) ddbEl.value='';
+    }
+
+    // Import/Export library folders
+    function exportLibrary(){ downloadJSON(store.libraryFolders, 'library-folders.json'); }
+    function importLibrary(file){ const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(Array.isArray(data)) { store.libraryFolders=data; saveLS(); renderLibrary(); } else if(Array.isArray(data?.items)) { // single folder
+      store.libraryFolders=[data]; saveLS(); renderLibrary(); } else if(Array.isArray(data)){} }catch{ alert('Invalid JSON'); } }; r.readAsText(file); }
+
+    function importCreature(file){
+      const r = new FileReader();
+      r.onload = ()=>{
+        try{
+          const data = JSON.parse(r.result);
+          if(data && typeof data === 'object' && data.name){
+            const folder = getFolderById(currentFolderId) || store.libraryFolders[0];
+            const fresh = {id:uid(), name:data.name, type:data.type||'enemy', ac:data.ac, hp:data.hp, maxHp:data.maxHp||data.hp, imageUrl:data.imageUrl, sheetImageData:data.sheetImageData, ddbUrl:data.ddbUrl};
+            folder.items.push(fresh);
+            saveLS(); renderLibrary();
+          } else {
+            alert('Invalid creature JSON');
+          }
+        }catch{ alert('Invalid JSON'); }
+      };
+      r.readAsText(file);
+    }
+
+    // =====================================================
+    // ENCOUNTER BUILDER
+    // =====================================================
+    function sortEncounter(){ store.encounter.sort((a,b)=>(b.init||0)-(a.init||0)); }
+
+    function renderEncounter(){
+      const el = document.getElementById('enc-list'); el.innerHTML = '';
+      if(!store.encounter.length){ el.innerHTML = '<div class="muted">Drop creatures here or press “Add” in Library</div>'; }
+      store.encounter.forEach((c,idx)=>{
+        const isCurrentTurn = !!(store.combat.active && idx === store.combat.turn);
+        const row = document.createElement('div'); row.className = `slot ${c.type} ${isCurrentTurn?'current-turn':''}`; row.draggable = true;
+        row.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain', JSON.stringify({kind:'enc', index:idx}));});
+        row.innerHTML = `
+          <div class="row" style="gap:10px">
+            <div style="position: relative;">
+              <img class="avatar" src="${c.imageUrl||'https://via.placeholder.com/64x64?text=?'}" onerror="this.style.display='none'" data-click="img" />
+              ${Number.isFinite(c.hp) && c.hp<=0 ? `<div class='ko-overlay'><img src='https://png.pngtree.com/png-vector/20230527/ourmid/pngtree-red-cross-paint-clipart-transparent-background-vector-png-image_7110618.png' alt='KO'/></div>` : ''}
+            </div>
+            <div class="col">
+              <strong>${c.name}</strong>
+              <div class="row tiny" style="gap:10px">
+                ${isCurrentTurn?`<span class="chip now-chip">NOW</span>`:''}
+                <span class="chip">Init ${c.init ?? '-'}</span>
+                ${Number.isFinite(c.ac)?`<span class="chip">AC ${c.ac}</span>`:''}
+                ${Number.isFinite(c.hp)?`<span class="chip">HP ${c.hp}/${c.maxHp||c.hp}`:''}
+              </div>
+              <div class="condition-dropdown">
+                <button class="condition-dropdown-btn" data-creature-id="${c.id}">
+                  Conditions (${c.conditions ? c.conditions.length : 0})
+                </button>
+                <div class="condition-dropdown-content" data-creature-id="${c.id}">
+                  <input class="condition-search" type="text" placeholder="Search conditions…" data-role="condition-search" />
+                  ${Object.keys(CONDITIONS).map(conditionId => 
+                    `<div class="condition-dropdown-item ${hasCondition(c, conditionId) ? 'active' : ''}" 
+                      data-condition="${conditionId}" 
+                      data-creature-id="${c.id}">
+                      <div class="condition-indicator condition-${conditionId}"></div>
+                      <span>${CONDITIONS[conditionId].name}</span>
+                    </div>`
+                  ).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <input class="num" type="number" value="${c.init ?? ''}" placeholder="Init" data-k="init" />
+            ${Number.isFinite(c.hp)?`<input class="num" type="number" value="${c.hp}" data-k="hp" title="HP" />`:''}
+            <button class="btn-small btn-line" data-act="save">Save to Library</button>
+            <button class="btn-small btn-ghost" data-act="rm">Remove</button>
+          </div>`;
+        
+        // Add condition rings to avatar
+        const avatarContainer = row.querySelector('[style*="position: relative"]');
+        renderConditionRings(avatarContainer, c);
+        
+        // Add condition labels below name
+        const nameContainer = row.querySelector('.col');
+        renderConditionLabels(nameContainer, c);
+        row.addEventListener('input', (e)=>{
+          const inp = e.target; if(!(inp instanceof HTMLInputElement)) return; const k = inp.dataset.k; if(!k) return; c[k] = Number.parseInt(inp.value)||0; if(k==='hp' && c.maxHp==null) c.maxHp=c.hp; sortEncounter(); renderEncounter();
+        });
+        row.addEventListener('click', (e)=>{
+          const act = e.target.closest('button')?.dataset.act; if(!act) return;
+          if(act==='rm'){ store.encounter.splice(idx,1); renderEncounter(); saveLS(); }
+          if(act==='save'){ toLibrary(c); }
+        });
+        
+        // Condition dropdown handlers
+        row.addEventListener('click', (e)=>{
+          const dropdownBtn = e.target.closest('.condition-dropdown-btn');
+          if(dropdownBtn) {
+            const creatureId = dropdownBtn.dataset.creatureId;
+            const dropdownContent = row.querySelector('.condition-dropdown-content');
+            dropdownContent.classList.toggle('show');
+            // focus search when opened
+            if(dropdownContent.classList.contains('show')){
+              const input = dropdownContent.querySelector('input.condition-search');
+              input && input.focus();
+            }
+            e.stopPropagation();
+          }
+          
+          const dropdownItem = e.target.closest('.condition-dropdown-item');
+          if(dropdownItem) {
+            const conditionId = dropdownItem.dataset.condition;
+            const creatureId = dropdownItem.dataset.creatureId;
+            const creature = store.encounter.find(c => c.id === creatureId);
+            
+            if(creature) {
+              if(hasCondition(creature, conditionId)) {
+                removeCondition(creature, conditionId);
+              } else {
+                addCondition(creature, conditionId);
+              }
+              renderEncounter();
+              if(store.combat.active) {
+                renderStrip();
+                renderDM();
+              }
+            }
+            e.stopPropagation();
+          }
+          // live filter for condition search
+          const condSearch = e.target.closest('input.condition-search');
+          if(condSearch){
+            const q = condSearch.value.trim().toLowerCase();
+            const cont = row.querySelector('.condition-dropdown-content');
+            cont.querySelectorAll('.condition-dropdown-item').forEach(it=>{
+              const name = it.querySelector('span')?.textContent?.toLowerCase()||'';
+              it.style.display = name.includes(q) ? '' : 'none';
+            });
+            e.stopPropagation();
+          }
+        });
+        // Live filter on typing inside the dropdown search
+        row.addEventListener('input', (e)=>{
+          const condSearch = e.target.closest && e.target.closest('input.condition-search');
+          if(!condSearch) return;
+          const q = condSearch.value.trim().toLowerCase();
+          const cont = condSearch.closest('.condition-dropdown-content') || row.querySelector('.condition-dropdown-content');
+          if(!cont) return;
+          cont.querySelectorAll('.condition-dropdown-item').forEach(it=>{
+            const name = it.querySelector('span')?.textContent?.toLowerCase()||'';
+            it.style.display = name.includes(q) ? '' : 'none';
+          });
+        });
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e)=>{
+          if(!e.target.closest('.condition-dropdown')) {
+            document.querySelectorAll('.condition-dropdown-content.show').forEach(dropdown => {
+              dropdown.classList.remove('show');
+            });
+          }
+        });
+        // image click → show HP modal if DDB link present, otherwise just open DDB
+        row.addEventListener('click',(e)=>{
+          const tag = e.target.closest('[data-click="img"]');
+          if(tag && c.ddbUrl){ 
+            showHpModal(c);
+            // Open D&D Beyond in background
+            setTimeout(() => openPopupUrl(c.ddbUrl, c.name+' — D&D Beyond'), 100);
+          }
+        });
+        el.appendChild(row);
+      });
+      // DnD drop targets
+      el.ondragover = (e)=>{e.preventDefault();};
+      el.ondrop = (e)=>{
+        e.preventDefault();
+        const data = JSON.parse(e.dataTransfer.getData('text/plain')||'{}');
+        if(data.kind==='lib'){
+          const cre = listAllCreatures().find(x=>x.id===data.id); if(cre) promptAddFromLibrary(cre);
+        }else if(data.kind==='enc'){
+          sortEncounter(); renderEncounter();
+        }
+      };
+      renderScenes();
+      // After rendering, optionally focus current-turn row
+      if(shouldAutoFocusEncounter){
+        shouldAutoFocusEncounter = false;
+        setTimeout(()=>{
+          try{
+            const cur = document.querySelector('#enc-list .current-turn');
+            const container = document.querySelector('.encounter-scroll');
+            if(cur && container){
+              const curRect = cur.getBoundingClientRect();
+              const contRect = container.getBoundingClientRect();
+              const offset = (curRect.top + curRect.height/2) - (contRect.top + contRect.height/2);
+              container.scrollTop += offset;
+            }
+          }catch{}
+        }, 0);
+      }
+    }
+
+    function toLibrary(c){
+      // Save creature to current folder (keeps sheetImageData)
+      const folder = getFolderById(currentFolderId) || store.libraryFolders[0];
+      const base = {id:uid(), name:c.name, type:c.type, ac:c.ac, hp:c.hp, maxHp:c.maxHp, imageUrl:c.imageUrl, sheetImageData:c.sheetImageData};
+      folder.items.push(base); saveLS(); renderLibrary();
+    }
+
+    // =====================================================
+    // SCENES
+    // =====================================================
+    function renderScenes(){
+      const list = document.getElementById('scenes-list'); list.innerHTML='';
+      store.scenes.forEach(sc=>{
+        const item=document.createElement('div'); item.className='lib-item';
+        item.innerHTML=`<div class="col"><strong>${sc.name}</strong><span class="tiny muted">${sc.items.length} creatures • ${sc.date}</span></div>
+        <div class="row"><button data-act="load" class="btn-line btn-small">Load</button><button data-act="del" class="btn-ghost btn-small">Delete</button></div>`;
+        item.addEventListener('click',(e)=>{
+          const act = e.target.closest('button')?.dataset.act; if(!act) return;
+          if(act==='load'){ store.encounter = JSON.parse(JSON.stringify(sc.items)); sortEncounter(); renderEncounter(); }
+          if(act==='del'){ store.scenes = store.scenes.filter(x=>x.id!==sc.id); saveLS(); renderScenes(); }
+        });
+        list.appendChild(item);
+      });
+    }
+
+    // =====================================================
+    // COMBAT (player strip + DM panel)
+    // =====================================================
+    function enterCombat(){ if(!store.encounter.length) return; sortEncounter(); store.combat = {active:true,turn:0,round:1}; saveLS(); document.getElementById('combat-area').style.display='block'; renderStrip(); renderDM(); document.getElementById('turns').textContent = String(store.encounter.length); }
+    function endCombat(){
+      store.combat = {active:false,turn:0,round:1};
+      saveLS();
+      document.getElementById('combat-area').style.display='none';
+      document.getElementById('dm-side').style.display='none';
+      // Ensure popup is closed and strip returns to original pane when combat ends
+      try{ if(stripPopup && !stripPopup.closed){ stripPopup.close(); } }catch{}
+      stripPopup = null; stripPopped = false;
+      const localStrip = document.getElementById('obs-strip'); if(localStrip) localStrip.style.display='';
+      if(popupMonitorInterval){ clearInterval(popupMonitorInterval); popupMonitorInterval=null; }
+      const btn = document.getElementById('btn-popout'); if(btn){ btn.textContent = 'Pop Out Strip'; }
+    }
+    function nextTurn(){ if(!store.combat.active) return; store.combat.turn = (store.combat.turn+1)%store.encounter.length; if(store.combat.turn===0) store.combat.round++; onTurnAdvanced(); saveLS(); renderStrip(); renderDM(); shouldAutoFocusEncounter = true; renderEncounter(); }
+    function prevTurn(){ if(!store.combat.active) return; store.combat.turn = (store.combat.turn-1+store.encounter.length)%store.encounter.length; if(store.combat.turn===store.encounter.length-1) store.combat.round=Math.max(1,store.combat.round-1); onTurnAdvanced(); saveLS(); renderStrip(); renderDM(); shouldAutoFocusEncounter = true; renderEncounter(); }
+
+    function ensureMapTokens(){
+      // Generate tokens for all encounter entries if not present
+      if(!store.map) store.map={strokes:[],tokens:[],zoom:1};
+      const has = new Set((store.map.tokens||[]).map(t=>t.creatureId));
+      store.encounter.forEach((c,i)=>{ if(!has.has(c.id) && c.type!=='player'){ store.map.tokens.push({id:uid(), creatureId:c.id, x: 40 + (i%8)*60, y: 40 + Math.floor(i/8)*60}); }});
+      saveLS();
+      renderMapTokens();
+    }
+
+    function renderStrip(){
+      const wrap = document.getElementById('obs-strip'); wrap.innerHTML='';
+      if(!store.encounter.length){ wrap.textContent = 'No creatures in combat'; return; }
+      const order = store.encounter.map((_,i)=>store.encounter[(store.combat.turn+i)%store.encounter.length]);
+      order.forEach((c,i)=>{
+        const frCls = ['frame', c.type, hpClass(c)]; if(i===0) frCls.push('current');
+        const cont = document.createElement('div'); cont.className='portrait';
+        const hpCur = (Number.isFinite(c.hp) ? c.hp : null);
+        const hpMax = (Number.isFinite(c.maxHp) ? c.maxHp : hpCur);
+        const hpPct = (hpCur!=null && hpMax && hpMax>0) ? Math.max(0, Math.min(100, Math.round((hpCur/hpMax)*100))) : null;
+        const hpbarHtml = (c.type==='player' && hpPct!=null)
+          ? `<div class=\"hpbar\"><div class=\"hpbar-fill\" style=\"width:${hpPct}%;\"></div><div class=\"hpbar-text\">${hpCur}/${hpMax}</div></div>`
+          : `<div class=\"hpbar hpbar-empty\"></div>`;
+        cont.innerHTML = `
+          ${hpbarHtml}
+          <div class="${frCls.join(' ')}" data-click="img">
+            <img class="img" src="${c.imageUrl||'https://via.placeholder.com/80x80?text=?'}" onerror="this.style.display='none'"/>
+            ${Number.isFinite(c.hp) && c.hp<=0 ? `<div class='ko-overlay'><img src='https://png.pngtree.com/png-vector/20230527/ourmid/pngtree-red-cross-paint-clipart-transparent-background-vector-png-image_7110618.png' alt='KO'/></div>` : ''}
+            ${i===0?'<div class="tag">NOW</div>':''}
+          </div>
+          <div class="name">${c.name}</div>
+          <div class="stats"></div>`;
+        wrap.appendChild(cont);
+        
+        // Add condition rings to combat strip portraits
+        const frame = cont.querySelector('.frame');
+        renderConditionRings(frame, c);
+        
+        // Add condition labels below name in combat strip
+        const nameDiv = cont.querySelector('.name');
+        renderConditionLabels(nameDiv, c);
+        // click on portrait frame → show HP modal if DDB present, otherwise just open DDB
+        cont.addEventListener('click',(e)=>{
+          const target = e.target.closest('[data-click="img"]');
+          if(target && c.ddbUrl){ 
+            showHpModal(c);
+            // Open D&D Beyond in background
+            setTimeout(() => openPopupUrl(c.ddbUrl, c.name+' — D&D Beyond'), 100);
+          }
+        });
+      });
+      document.getElementById('round').textContent = String(store.combat.round);
+      document.getElementById('turn').textContent = String(store.combat.turn+1);
+      // Also update popup if active
+      if(stripPopped){ renderStripInPopup(); }
+      // ensure tokens are generated
+      ensureMapTokens();
+    }
+
+    function renderDM(){
+      const side = document.getElementById('dm-side');
+      if(!store.combat.active){ side.style.display='none'; return; }
+      side.style.display='block';
+      const box = document.getElementById('dm-wrap');
+      box.innerHTML='';
+      const dmCreatures = store.encounter.filter(c=> c.type==='enemy' || c.type==='ally' || c.type==='neutral');
+      if(!dmCreatures.length){ box.innerHTML = '<div class="muted">No creatures in the encounter yet.</div>'; return; }
+      dmCreatures.forEach((c)=>{
+        const isCurrentTurn = !!(store.combat.active && store.encounter[store.combat.turn]?.id === c.id);
+        const card = document.createElement('div'); card.className='enemy-admin' + (isCurrentTurn ? ' dm-current' : '');
+        card.innerHTML = `
+          <div class="enemy-header">
+            <div class="enemy-title">
+              <div style="position: relative;">
+                <img class="avatar" src="${c.imageUrl||'https://via.placeholder.com/64x64?text=?'}" onerror="this.style.display='none'" data-click="img"/>
+                ${Number.isFinite(c.hp) && c.hp<=0 ? `<div class='ko-overlay'><img src='https://png.pngtree.com/png-vector/20230527/ourmid/pngtree-red-cross-paint-clipart-transparent-background-vector-png-image_7110618.png' alt='KO'/></div>` : ''}
+              </div>
+              <div class="col"><strong>${c.name}</strong><span class="tiny muted">HP ${Number.isFinite(c.hp)?`${c.hp}/${c.maxHp||c.hp}`:'—'} • AC ${c.ac??'—'} • Init ${c.init??'—'}</span></div>
+            </div>
+            <div class="enemy-controls">
+              ${Number.isFinite(c.hp)?`
+                <button class="btn-small btn-line" data-delta="-10">-10</button>
+                <button class="btn-small btn-line" data-delta="-5">-5</button>
+                <button class="btn-small btn-line" data-delta="-1">-1</button>
+                <input class="num" type="number" value="0" step="1" aria-label="Damage/Heal" />
+                <button class="btn-small btn-primary" data-act="apply">Apply</button>
+                <button class="btn-small btn-line" data-delta="1">+1</button>
+                <button class="btn-small btn-line" data-delta="5">+5</button>
+                <button class="btn-small btn-line" data-delta="10">+10</button>
+              `:''}
+              <button class="btn-small btn-ghost" data-act="kill">Set 0 HP</button>
+            </div>
+          </div>
+          
+          <div class="condition-dropdown">
+            <button class="condition-dropdown-btn" data-creature-id="${c.id}">
+              Conditions (${c.conditions ? c.conditions.length : 0})
+            </button>
+            <div class="condition-dropdown-content" data-creature-id="${c.id}">
+              <input class="condition-search" type="text" placeholder="Search conditions…" data-role="condition-search" />
+              ${Object.keys(CONDITIONS).map(conditionId => 
+                `<div class="condition-dropdown-item ${hasCondition(c, conditionId) ? 'active' : ''}" 
+                  data-condition="${conditionId}" 
+                  data-creature-id="${c.id}">
+                  <div class="condition-indicator condition-${conditionId}"></div>
+                  <span>${CONDITIONS[conditionId].name}</span>
+                </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <details class="sheet" ${c.sheetImageData?'open':''}>
+            <summary class="row" style="gap:8px"><span>${(c.type||'Creature').replace(/^./,m=>m.toUpperCase())} Sheet / Image</span></summary>
+            <div class="grid" style="grid-template-columns:1fr;gap:10px;align-items:start">
+              <label class="btn-line btn-small" style="text-align:center;display:inline-flex;gap:6px;align-items:center;justify-content:center">
+                <input type="file" accept="image/*" hidden />
+                Upload Image
+              </label>
+              <button class="btn-line btn-small" data-act="clearimg">Clear Image</button>
+              <div>
+                ${c.sheetImageData?`<img class="sheet-img" src="${c.sheetImageData}" alt="${c.name} sheet"/>`:'<div class="muted">No image uploaded yet. (Optional) Upload a statblock JPG/PNG to keep handy for this enemy.</div>'}
+              </div>
+            </div>
+          </details>
+        `;
+        const input = card.querySelector('input.num');
+        card.querySelectorAll('[data-delta]').forEach(btn=>btn.addEventListener('click',()=>{ if(!Number.isFinite(c.hp)) return; const d = Number(btn.dataset.delta); c.hp = clamp((c.hp||0)+d,0,c.maxHp||c.hp||0); saveLS(); renderDM(); renderStrip(); }));
+        const applyBtn = card.querySelector('[data-act="apply"]'); if(applyBtn){ applyBtn.addEventListener('click',()=>{ let v = Number.parseInt(input.value||'0')||0; if(!Number.isFinite(c.hp)) return; c.hp = clamp((c.hp||0)+v,0,c.maxHp||c.hp||0); input.value='0'; saveLS(); renderDM(); renderStrip(); }); }
+        
+        // Add condition rings to DM panel avatar
+        const avatarContainer = card.querySelector('[style*="position: relative"]');
+        renderConditionRings(avatarContainer, c);
+        
+        // Add condition labels to DM panel
+        const enemyTitle = card.querySelector('.enemy-title .col');
+        renderConditionLabels(enemyTitle, c);
+        
+        // Condition dropdown handlers for DM panel
+        card.addEventListener('click', (e)=>{
+          const dropdownBtn = e.target.closest('.condition-dropdown-btn');
+          if(dropdownBtn) {
+            const creatureId = dropdownBtn.dataset.creatureId;
+            const dropdownContent = card.querySelector('.condition-dropdown-content');
+            dropdownContent.classList.toggle('show');
+            if(dropdownContent.classList.contains('show')){
+              const input = dropdownContent.querySelector('input.condition-search');
+              input && input.focus();
+            }
+            e.stopPropagation();
+          }
+          
+          const dropdownItem = e.target.closest('.condition-dropdown-item');
+          if(dropdownItem) {
+            const conditionId = dropdownItem.dataset.condition;
+            const creatureId = dropdownItem.dataset.creatureId;
+            const creature = store.encounter.find(c => c.id === creatureId);
+            
+            if(creature) {
+              if(hasCondition(creature, conditionId)) {
+                removeCondition(creature, conditionId);
+              } else {
+                addCondition(creature, conditionId);
+              }
+              renderDM();
+              renderStrip();
+            }
+            e.stopPropagation();
+          }
+          // live filter in DM panel dropdown
+          const condSearch = e.target.closest('input.condition-search');
+          if(condSearch){
+            const q = condSearch.value.trim().toLowerCase();
+            const cont = card.querySelector('.condition-dropdown-content');
+            cont.querySelectorAll('.condition-dropdown-item').forEach(it=>{
+              const name = it.querySelector('span')?.textContent?.toLowerCase()||'';
+              it.style.display = name.includes(q) ? '' : 'none';
+            });
+            e.stopPropagation();
+          }
+        });
+        // Live filter on typing for DM panel dropdown search
+        card.addEventListener('input', (e)=>{
+          const condSearch = e.target.closest && e.target.closest('input.condition-search');
+          if(!condSearch) return;
+          const q = condSearch.value.trim().toLowerCase();
+          const cont = condSearch.closest('.condition-dropdown-content') || card.querySelector('.condition-dropdown-content');
+          if(!cont) return;
+          cont.querySelectorAll('.condition-dropdown-item').forEach(it=>{
+            const name = it.querySelector('span')?.textContent?.toLowerCase()||'';
+            it.style.display = name.includes(q) ? '' : 'none';
+          });
+        });
+        // enemy avatar click → show HP modal if DDB present, otherwise just open DDB
+        card.addEventListener('click',(e)=>{
+          const av = e.target.closest('[data-click="img"]');
+          if(av && c.ddbUrl){ 
+            showHpModal(c);
+            // Open D&D Beyond in background
+            setTimeout(() => openPopupUrl(c.ddbUrl, c.name+' — D&D Beyond'), 100);
+          }
+        });
+        card.querySelector('[data-act="kill"]').addEventListener('click',()=>{ if(!Number.isFinite(c.hp)) return; c.hp=0; saveLS(); renderDM(); renderStrip(); });
+        const fileInput = card.querySelector('input[type="file"]');
+        fileInput?.addEventListener('change', (e)=>{ const f = e.target.files?.[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ c.sheetImageData = rd.result; saveLS(); renderDM(); }; rd.readAsDataURL(f); });
+        card.querySelector('[data-act="clearimg"]').addEventListener('click',()=>{ delete c.sheetImageData; saveLS(); renderDM(); });
+        // Open image in a dedicated popup window (avoids new tab; better for OBS)
+        card.addEventListener('click',(e)=>{
+          const img = e.target.closest('img.sheet-img');
+          if(img){
+            if(!c.sheetImageData){ alert('No image available for this enemy.'); return; }
+            const features = 'width=900,height=1200,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes';
+            const title = (c.name||'Enemy') + ' — Sheet';
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    html,body{height:100%;margin:0;background:#000}
+    body{display:flex;align-items:flex-start;justify-content:center}
+    img{display:block;max-width:100%;max-height:100vh;margin:0 auto}
+  </style>
+  <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <img src="${c.sheetImageData}" alt="${(c.name||'Enemy')} sheet" />
+  </body>
+</html>`;
+            const blob = new Blob([html], {type:'text/html'});
+            const url = URL.createObjectURL(blob);
+            const w = window.open(url, 'EnemySheet_'+(c.id||'win'), features);
+            if(w){
+              w.addEventListener('load',()=>{ try{ w.document.title = title; }catch{} URL.revokeObjectURL(url); }, {once:true});
+            } else {
+              URL.revokeObjectURL(url);
+              alert('Popup blocked — allow popups for this page to open the sheet in a new window.');
+            }
+          }
+        });
+        box.appendChild(card);
+        // If current turn enemy, bring it into view within DM panel
+        if(isCurrentTurn){
+          try{
+            const container = document.getElementById('dm-side');
+            if(container){
+              const cardRect = card.getBoundingClientRect();
+              const contRect = container.getBoundingClientRect();
+              const offset = (cardRect.top + cardRect.height/2) - (contRect.top + contRect.height/2);
+              container.scrollTop += offset;
+            }
+          }catch{}
+        }
+      });
+    }
+
+    // =====================================================
+    // POP-OUT INITIATIVE STRIP (Player-facing window)
+    // =====================================================
+    let stripPopup = null;
+    let stripPopped = false;
+    let popupMonitorInterval = null;
+
+    function getDisplayOrder(){
+      if(!store.encounter.length) return [];
+      return store.encounter.map((_,i)=>store.encounter[(store.combat.turn+i)%store.encounter.length]);
+    }
+
+    function ensurePopupHtml(){
+      if(!stripPopup || stripPopup.closed) return false;
+      const doc = stripPopup.document;
+      if(doc.getElementById('obs-strip')) return true;
+      const css = `:root{--gold:#f4d03f;--ink:#0a0a0a;--ink-2:#1a1a2e;--ink-3:#16213e;--good:#27ae60;--ally:#3498db;--warn:#f39c12;--bad:#e74c3c;--blue-key:#1900ff}
+html,body{height:100%}
+body{margin:0;background:transparent;color:#e0e0e0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;pointer-events:none}
+.obs-strip{background:var(--blue-key);padding:24px 18px 40px;display:flex;gap:12px;align-items:flex-start;overflow-x:auto;height:190px}
+.portrait{padding-bottom:22px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:92px}
+.frame{width:82px;height:82px;border-radius:12px;border:3px solid #555;overflow:hidden;position:relative;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;transition:.2s}
+.frame.player{border-color:var(--good)}
+.frame.enemy{border-color:var(--bad)}
+.frame.ally{border-color:var(--ally)}
+.frame.neutral{border-color:var(--warn)}
+.frame.current{border-color:var(--gold);transform:scale(1.06)}
+.img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.ko-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.ko-overlay img{max-width:85%;max-height:85%;opacity:.9;filter: drop-shadow(0 0 6px rgba(0,0,0,.6));}
+.tag{position:absolute;right:4px;top:4px;background:var(--gold);color:#111;font-weight:800;border-radius:8px;font-size:.6rem;padding:2px 5px}
+.name{max-width:82px;text-align:center;font-weight:700;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 5px rgba(0,0,0,.8)}
+.hpbar{width:92px;height:10px;border:2px solid #000;border-radius:6px;background:rgba(0,0,0,.6);position:relative;overflow:hidden;margin-bottom:4px}
+.hpbar-fill{position:absolute;left:0;top:0;bottom:0;background:#e74c3c}
+.hpbar-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.7rem;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.7),0 0 1px rgba(0,0,0,.8)}
+.hpbar-empty{visibility:hidden}
+.frame::after{content:"";position:absolute;inset:0;border-radius:12px;pointer-events:none;border:0}
+@keyframes pulseRedIn{0%{box-shadow:inset 0 0 0 0 rgba(231,76,60,.95)}60%{box-shadow:inset 0 0 22px 10px rgba(231,76,60,0)}100%{box-shadow:inset 0 0 0 0 rgba(231,76,60,0)}}
+@keyframes pulseYellowIn{0%{box-shadow:inset 0 0 0 0 rgba(243,156,18,.95)}60%{box-shadow:inset 0 0 18px 8px rgba(243,156,18,0)}100%{box-shadow:inset 0 0 0 0 rgba(243,156,18,0)}}
+.frame.hp-quarter::after{animation:pulseRedIn 1.2s ease-in-out infinite}
+.frame.hp-half::after{animation:pulseYellowIn 1.3s ease-in-out infinite}
+.condition-blinded{ color: #2c3e50; }
+.condition-charmed{ color: #e91e63; }
+.condition-deafened{ color: #9c27b0; }
+.condition-exhaustion{ color: #795548; }
+.condition-frightened{ color: #ff5722; }
+.condition-grappled{ color: #8d6e63; }
+.condition-incapacitated{ color: #424242; }
+.condition-invisible{ color: #ffffff; }
+.condition-paralyzed{ color: #8bc34a; }
+.condition-petrified{ color: #9e9e9e; }
+.condition-poisoned{ color: #4caf50; }
+.condition-prone{ color: #ff9800; }
+.condition-restrained{ color: #ff6d00; }
+.condition-stunned{ color: #f44336; }
+.condition-unconscious{ color: #000000; }
+.condition-on-fire{ color: #ff1744; }
+.condition-electrocuted{ color: #ffeb3b; }
+.condition-frozen{ color: #80deea; }
+.condition-bleeding{ color: #d32f2f; }
+.condition-blessed{ color: #ffd700; }
+.condition-cursed{ color: #7b1fa2; }
+.condition-ring{position:absolute;border-radius:50%;pointer-events:none;z-index:10;box-shadow:0 0 0 2px #000 inset;background:transparent}
+.condition-ring.outer{width:100%;height:100%;border-width:3px;border-style:solid;border-color:currentColor;animation:pulse-ring 2s infinite;top:0;left:0}
+.condition-ring.inner{width:85%;height:85%;top:7.5%;left:7.5%;border-width:2px;border-style:solid;border-color:currentColor}
+.condition-ring.innermost{width:70%;height:70%;top:15%;left:15%;border-width:2px;border-style:solid;border-color:currentColor}
+@keyframes pulse-ring{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.condition-labels{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;justify-content:center}
+.condition-label{font-size:.7rem;font-weight:800;padding:2px 6px;border-radius:4px;border:2px solid;white-space:nowrap;color:#fff;background:#fff;text-shadow:0 1px 1px rgba(0,0,0,.5),0 0 1px rgba(0,0,0,.7)}
+.condition-label.condition-blinded{border-color:#2c3e50;background:#2c3e50}
+.condition-label.condition-charmed{border-color:#e91e63;background:#e91e63}
+.condition-label.condition-deafened{border-color:#9c27b0;background:#9c27b0}
+.condition-label.condition-exhaustion{border-color:#795548;background:#795548}
+.condition-label.condition-frightened{border-color:#ff5722;background:#ff5722}
+.condition-label.condition-grappled{border-color:#8d6e63;background:#8d6e63}
+.condition-label.condition-incapacitated{border-color:#424242;background:#424242}
+.condition-label.condition-invisible{border-color:#ffffff;background:#ffffff}
+.condition-label.condition-paralyzed{border-color:#8bc34a;background:#8bc34a}
+.condition-label.condition-petrified{border-color:#9e9e9e;background:#9e9e9e}
+.condition-label.condition-poisoned{border-color:#4caf50;background:#4caf50}
+.condition-label.condition-prone{border-color:#ff9800;background:#ff9800}
+.condition-label.condition-restrained{border-color:#ff6d00;background:#ff6d00}
+.condition-label.condition-stunned{border-color:#f44336;background:#f44336}
+.condition-label.condition-unconscious{border-color:#000000;background:#000000}
+.condition-label.condition-on-fire{border-color:#ff1744;background:#ff1744}
+.condition-label.condition-electrocuted{border-color:#ffeb3b;background:#ffeb3b}
+.condition-label.condition-frozen{border-color:#80deea;background:#80deea}
+.condition-label.condition-bleeding{border-color:#d32f2f;background:#d32f2f}
+.condition-label.condition-blessed{border-color:#ffd700;background:#ffd700}
+.condition-label.condition-cursed{border-color:#7b1fa2;background:#7b1fa2}`;
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Initiative Strip</title><style>${css}</style><link rel="icon" href="data:"></head><body><div id="obs-strip" class="obs-strip" aria-label="Player-facing initiative strip"></div></body></html>`;
+      doc.open(); doc.write(html); doc.close();
+      return true;
+    }
+
+    function buildStripItemHtml(creature, isCurrent){
+      const frameClasses = ['frame', creature.type, hpClass(creature)];
+      if(isCurrent) frameClasses.push('current');
+      const img = creature.imageUrl || 'https://via.placeholder.com/80x80?text=?';
+      const nowTag = isCurrent ? '<div class="tag">NOW</div>' : '';
+      const hpCur = (Number.isFinite(creature.hp) ? creature.hp : null);
+      const hpMax = (Number.isFinite(creature.maxHp) ? creature.maxHp : hpCur);
+      const hpPct = (hpCur!=null && hpMax && hpMax>0) ? Math.max(0, Math.min(100, Math.round((hpCur/hpMax)*100))) : null;
+      const playerHp = (creature.type==='player' && hpPct!=null)
+        ? `<div class="hpbar"><div class="hpbar-fill" style="width:${hpPct}%;"></div><div class="hpbar-text">${hpCur}/${hpMax}</div></div>`
+        : `<div class="hpbar hpbar-empty"></div>`;
+      const rings = (Array.isArray(creature.conditions)?creature.conditions:[]).slice(0,3)
+        .map((condId, idx)=>{
+          const ringClass = idx===0?'outer':(idx===1?'inner':'innermost');
+          return `<div class="condition-ring ${ringClass} condition-${condId}"></div>`;
+        }).join('');
+      const ko = (Number.isFinite(creature.hp) && creature.hp<=0) ? `<div class='ko-overlay'><img src='https://png.pngtree.com/png-vector/20230527/ourmid/pngtree-red-cross-paint-clipart-transparent-background-vector-png-image_7110618.png' alt='KO'/></div>` : '';
+      const labels = (Array.isArray(creature.conditions)&&creature.conditions.length)
+        ? `<div class="condition-labels">${creature.conditions.map(id=>`<span class="condition-label condition-${id}">${CONDITIONS[id]?.name||id}</span>`).join('')}</div>`
+        : '';
+      return `<div class=\"portrait\">\n        ${playerHp}\n        <div class=\"${frameClasses.join(' ')}\">\n          <img class=\"img\" src=\"${img}\"/>\n          ${ko}\n          ${nowTag}\n          ${rings}\n        </div>\n        <div class=\"name\">${creature.name}</div>\n        ${labels}\n      </div>`;
+    }
+
+    function renderStripInPopup(){
+      if(!stripPopped || !stripPopup || stripPopup.closed) return;
+      if(!ensurePopupHtml()) return;
+      const doc = stripPopup.document;
+      const wrap = doc.getElementById('obs-strip'); if(!wrap) return;
+      const order = getDisplayOrder();
+      wrap.innerHTML = order.map((c, i)=> buildStripItemHtml(c, i===0)).join('');
+    }
+
+    function openStripPopup(){
+      const features = 'width=1200,height=260,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes';
+      stripPopup = window.open('', 'InitiativeStripWindow', features);
+      if(!stripPopup){ alert('Popup blocked — allow popups for this page.'); return; }
+      stripPopped = true;
+      ensurePopupHtml();
+      // Hide local strip to free space
+      const localStrip = document.getElementById('obs-strip'); if(localStrip) localStrip.style.display='none';
+      const btn = document.getElementById('btn-popout'); if(btn){ btn.textContent = 'Reattach Strip'; }
+      renderStripInPopup();
+      if(popupMonitorInterval){ clearInterval(popupMonitorInterval); }
+      popupMonitorInterval = setInterval(()=>{
+        if(stripPopup && stripPopup.closed){
+          // Reattach automatically if user closes popup
+          closeStripPopup();
+        }
+      }, 1000);
+    }
+
+    function closeStripPopup(){
+      try{ if(stripPopup && !stripPopup.closed){ stripPopup.close(); } }catch{}
+      stripPopup = null; stripPopped = false;
+      if(popupMonitorInterval){ clearInterval(popupMonitorInterval); popupMonitorInterval=null; }
+      const localStrip = document.getElementById('obs-strip'); if(localStrip) localStrip.style.display='';
+      const btn = document.getElementById('btn-popout'); if(btn){ btn.textContent = 'Pop Out Strip'; }
+      // Re-render local strip now visible
+      renderStrip();
+    }
+
+    function toggleStripPopout(){
+      if(stripPopped){ closeStripPopup(); } else { openStripPopup(); }
+    }
+
+    // =====================================================
+    // WIRING
+    // =====================================================
+    document.getElementById('btn-add-lib').addEventListener('click', addCreatureFromForm);
+    // In case hidden sidebar exists, wire its button too
+    const btnSide = document.getElementById('btn-add-lib-side'); if(btnSide){ btnSide.addEventListener('click', addCreatureFromForm); }
+    document.getElementById('btn-new-folder').addEventListener('click', newFolder);
+    document.getElementById('folder-select').addEventListener('change',(e)=>{ currentFolderId = e.target.value; renderLibrary(); });
+    // Library search: filters across all folders; Enter to add if single match
+    document.getElementById('lib-search').addEventListener('input', (e)=>{
+      const q = e.target.value.trim().toLowerCase();
+      const list = document.getElementById('lib-list');
+      // If empty, re-render current folder
+      if(!q){ renderLibrary(); return; }
+      // Build flat filtered list across all folders
+      const results = store.libraryFolders.flatMap(f=>f.items.map(it=>({f, it})))
+        .filter(({it})=> it.name?.toLowerCase().includes(q));
+      list.innerHTML='';
+      results.forEach(({f,it})=>{
+        const item = document.createElement('div'); item.className='lib-item';
+        item.draggable = true; item.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain', JSON.stringify({kind:'lib', id:it.id}));});
+        item.innerHTML = `
+          <div class="lib-left">
+            <img class="avatar" src="${it.imageUrl||'https://via.placeholder.com/64x64?text=?'}" alt="" onerror="this.style.display='none'"/>
+            <div class="col">
+              <div class="row" style="gap:6px">
+                <strong>${it.name}</strong>
+                <span class="type-pill ${it.type[0].toUpperCase()}">${it.type}</span>
+              </div>
+              <div class="row tiny" style="gap:10px">
+                <span class="chip">${f.name}</span>
+                ${Number.isFinite(it.hp)?`<span class="chip">HP ${it.hp}/${it.maxHp||it.hp}</span>`:''}
+                ${Number.isFinite(it.ac)?`<span class="chip">AC ${it.ac}</span>`:''}
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn-small btn-line" data-act="add">Add</button>
+            <button class="btn-small btn-line" data-act="export">Export</button>
+          </div>`;
+        item.addEventListener('click', (ev)=>{
+          const act = ev.target.closest('button')?.dataset.act; if(!act) return;
+          if(act==='add'){ promptAddFromLibrary(it); }
+          if(act==='export'){ downloadJSON(it, `${it.name.replace(/[^a-z0-9-_]/gi,'_')||'creature'}.json`); }
+        });
+        list.appendChild(item);
+      });
+    });
+
+    document.getElementById('btn-clear-all').addEventListener('click', ()=>{ store.encounter.length=0; saveLS(); renderEncounter(); });
+
+    // D&D Beyond quick links (popup)
+    document.getElementById('btn-dndb-spells').addEventListener('click', ()=> openPopupUrl('https://www.dndbeyond.com/spells', 'DDB Spells'));
+    document.getElementById('btn-dndb-items').addEventListener('click', ()=> openPopupUrl('https://www.dndbeyond.com/magic-items', 'DDB Magic Items'));
+    document.getElementById('btn-dndb-rules').addEventListener('click', ()=> openPopupUrl('https://www.dndbeyond.com/search', 'DDB Rules'));
+
+    // Sources panel show/hide with persistence
+    const sourcesPanel = document.getElementById('sources-panel');
+    const sourcesTab = document.getElementById('sources-tab');
+    const savedSourcesVisible = localStorage.getItem('sourcesVisible');
+    function showSources(v){
+      if(v){ sourcesPanel.style.display='block'; sourcesTab.style.display='none'; localStorage.setItem('sourcesVisible','1'); }
+      else { sourcesPanel.style.display='none'; sourcesTab.style.display='block'; localStorage.setItem('sourcesVisible','0'); }
+    }
+    document.getElementById('sources-close').addEventListener('click', ()=> showSources(false));
+    sourcesTab.addEventListener('click', ()=> showSources(true));
+    showSources(savedSourcesVisible!== '0');
+
+    document.getElementById('btn-save-lib').addEventListener('click', ()=>{ saveLS(); alert('Saved locally.'); });
+    document.getElementById('btn-export-lib').addEventListener('click', ()=> downloadJSON(store.libraryFolders, 'library-folders.json'));
+    document.getElementById('import-lib').addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(Array.isArray(data)) { store.libraryFolders=data; saveLS(); renderLibrary(); } else { alert('Expected an array of folders.'); } }catch{ alert('Invalid JSON'); } }; r.readAsText(f); });
+    document.getElementById('import-creature').addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(!f) return; importCreature(f); e.target.value=''; });
+
+    document.getElementById('btn-save-scene').addEventListener('click', ()=>{
+      const name = document.getElementById('scene-name').value.trim(); if(!name) return alert('Scene name?');
+      const scene = {id:uid(), name, items:JSON.parse(JSON.stringify(store.encounter)), date:new Date().toLocaleDateString()};
+      store.scenes.push(scene); saveLS(); renderScenes(); document.getElementById('scene-name').value='';
+    });
+    document.getElementById('btn-export-scenes').addEventListener('click', ()=> downloadJSON(store.scenes, 'scenes.json'));
+    document.getElementById('import-scenes').addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(Array.isArray(data)) { store.scenes=data; saveLS(); renderScenes(); } }catch{ alert('Invalid JSON'); } }; r.readAsText(f); });
+
+    document.getElementById('btn-start').addEventListener('click', enterCombat);
+    document.getElementById('btn-end').addEventListener('click', endCombat);
+    document.getElementById('btn-next').addEventListener('click', nextTurn);
+    document.getElementById('btn-prev').addEventListener('click', prevTurn);
+    document.getElementById('btn-popout').addEventListener('click', toggleStripPopout);
+
+    document.getElementById('btn-export-state').addEventListener('click', ()=> downloadJSON(store, 'bg3-tracker-state.json'));
+    document.getElementById('import-file').addEventListener('change', (e)=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); Object.assign(store,data); if(!store.map) store.map={strokes:[],tokens:[],zoom:1}; saveLS(); renderFolderSelect(); renderLibrary(); renderEncounter(); if(store.combat.active) { document.getElementById('combat-area').style.display='block'; renderStrip(); renderDM(); } initBattleMap(); }catch{ alert('Invalid JSON'); } }; r.readAsText(f); });
+
+    // HP Modal event listeners
+    document.getElementById('hp-modal-cancel').addEventListener('click', hideHpModal);
+    document.getElementById('hp-modal-update').addEventListener('click', updateHpFromModal);
+    
+    // Close modal on background click
+    document.getElementById('hp-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'hp-modal') {
+        hideHpModal();
+      }
+    });
+    
+    // Handle Enter key in modal input
+    document.getElementById('hp-modal-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        updateHpFromModal();
+      } else if (e.key === 'Escape') {
+        hideHpModal();
+      }
+    });
+
+    // Global drop to import array of creatures (legacy support)
+    window.addEventListener('dragover',e=>{e.preventDefault()});
+    window.addEventListener('drop',(e)=>{e.preventDefault(); const f=e.dataTransfer.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(Array.isArray(data)) { /* assume array of creatures → create a new folder */ const fdr={id:uid(),name:`Imported ${new Date().toLocaleTimeString()}` ,items:data}; store.libraryFolders.push(fdr); currentFolderId=fdr.id; saveLS(); renderLibrary(); } else { alert('Dropped file is not a creatures array.'); } }catch{ alert('Dropped file is not valid JSON.'); } }; r.readAsText(f); });
+
+    // Hover tooltips for conditions (labels and dropdown items)
+    document.addEventListener('mouseover', (e)=>{
+      const label = e.target.closest?.('.condition-label');
+      if(label && label.dataset.condition){ showConditionTooltipAt(label, label.dataset.condition); return; }
+      const item = e.target.closest?.('.condition-dropdown-item');
+      if(item && item.dataset.condition){ showConditionTooltipAt(item, item.dataset.condition); }
+    });
+    document.addEventListener('mouseout', (e)=>{
+      if(
+        e.target.closest?.('.condition-label') ||
+        e.target.closest?.('.condition-dropdown-item')
+      ){
+        hideConditionTooltip();
+      }
+    });
+    document.addEventListener('click', hideConditionTooltip, {capture:true});
+    window.addEventListener('scroll', hideConditionTooltip, true);
+
+    // =====================================================
+    // INIT
+    // =====================================================
+    loadLS();
+    ensureFolderSelected();
+    renderFolderSelect();
+    renderLibrary();
+    renderEncounter();
+    if(store.combat.active){ document.getElementById('combat-area').style.display='block'; renderStrip(); renderDM(); }
+    // Show DM timer UI always (DM-only local UI)
+    document.getElementById('dm-timer').style.display = 'block';
+    initTimerUI();
+
+    // =====================================================
+    // SELF-TESTS (minimal; logs to console) — run with button
+    // =====================================================
+    function assert(name, cond){ console[cond?'log':'error'](`${cond?'✔':'✖'} ${name}`); }
+    function runSelfTests(){
+      try{
+        // Test 1: hpClass thresholds
+        assert('hpClass red at 25%', hpClass({hp:5,maxHp:20})==='hp-quarter');
+        assert('hpClass yellow at 50%', hpClass({hp:10,maxHp:20})==='hp-half');
+
+        // Test 2: enemy HP numbers are hidden on strip
+        const tmp = document.createElement('div');
+        const enemy = {name:'Gob', type:'enemy', hp:6, maxHp:12, imageUrl:''};
+        const player = {name:'Hero', type:'player', hp:8, maxHp:10, imageUrl:''};
+        const htmlEnemy = `<div class="stats">${ (enemy.type==='player' && Number.isFinite(enemy.hp)) ? `<div class="hp-num player">${enemy.hp}/${enemy.maxHp||enemy.hp}</div>` : ''}</div>`;
+        const htmlPlayer = `<div class="stats">${ (player.type==='player' && Number.isFinite(player.hp)) ? `<div class=\"hp-num player\">${player.hp}/${player.maxHp||player.hp}</div>` : ''}</div>`;
+        tmp.innerHTML = htmlEnemy + htmlPlayer;
+        assert('Enemy HP not rendered', !tmp.textContent.includes('6/12'));
+        assert('Player HP rendered small', tmp.textContent.includes('8/10'));
+
+        // Test 3: DM panel appears in combat
+        const wasActive = store.combat.active; store.combat.active = true; renderDM();
+        assert('DM panel visible in combat', document.getElementById('dm-side').style.display==='block');
+        store.combat.active = wasActive; renderDM();
+
+        // Test 4: Folder migration & move
+        const origCount = listAllCreatures().length; const fA = store.libraryFolders[0]; const fB = store.libraryFolders[1];
+        const testC = {id:uid(), name:'Test NPC', type:'enemy'}; fA.items.push(testC); moveCreatureToFolder(testC.id, fA.id, fB.id);
+        assert('Creature moved to target folder', fB.items.some(x=>x.id===testC.id));
+
+        // Test 5: Sheet image persistence on save to library
+        const enemyC = {id:uid(), name:'Sheety', type:'enemy', sheetImageData:'data:image/png;base64,AA'};
+        store.encounter = [enemyC]; currentFolderId = fA.id; toLibrary(enemyC);
+        assert('Sheet data saved in library', listAllCreatures().some(x=>x.name==='Sheety' && x.sheetImageData));
+      }catch(e){ console.error('Self-tests failed', e); }
+    }
+    document.getElementById('btn-run-tests').addEventListener('click', runSelfTests);
+    // Init sources and battle map panels after DOM is ready
+    (function initSources(){
+      const vis = localStorage.getItem('sourcesVisible');
+      const sourcesPanel = document.getElementById('sources-panel');
+      const sourcesTab = document.getElementById('sources-tab');
+      function showSources(v){ if(v){ sourcesPanel.style.display='block'; sourcesTab.style.display='none'; localStorage.setItem('sourcesVisible','1'); } else { sourcesPanel.style.display='none'; sourcesTab.style.display='block'; localStorage.setItem('sourcesVisible','0'); } }
+      document.getElementById('sources-close').addEventListener('click', ()=> showSources(false));
+      sourcesTab.addEventListener('click', ()=> showSources(true));
+      showSources(vis!== '0');
+    })();
+    initBattleMap();
+  </script>
+</body>
+</html>
