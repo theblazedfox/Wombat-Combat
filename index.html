@@ -539,11 +539,16 @@
     .lib-search-input { min-width: 220px; }
     .condition-search { width: 100%; margin-bottom: 8px; }
   </style>
-  <!-- Dice-Box UMD (local vendor copy for GitHub Pages) -->
-  <script src="./vendor/dice-box/dice-box.min.js" defer></script>
+  <!-- Dice-Box ES Module (local vendor copy for GitHub Pages) -->
+  <script type="module">
+    import DiceBox from './vendor/dice-box/dice-box.es.min.js';
+    window.DiceBox = DiceBox;
+  </script>
 </head>
 <body>
   <div class="wrap">
+    <!-- GitHub Pages test container for local Dice-Box (no CDN) -->
+    <div id="dice-container" style="width:640px;height:400px;margin:2rem auto;display:none"></div>
     <!-- DM-only Timer -->
     <div id="dm-timer" class="dm-timer" style="display:none">
       <div class="time" id="dm-time">00:00</div>
@@ -811,7 +816,13 @@
   <script>
     // ================= DICE TRAY (Local UMD for GH Pages) =================
     (function initDiceOnReady(){
-      window.addEventListener('DOMContentLoaded', ()=> initDiceTray());
+      window.addEventListener('DOMContentLoaded', ()=>{
+        // Show the standalone container only if UMD is present
+        if(window.DiceBox){
+          document.getElementById('dice-container').style.display = 'block';
+        }
+        initDiceTray();
+      });
     })();
 
     let diceBox = null;
@@ -843,6 +854,15 @@
           });
           diceBox.init().then(()=>{
             diceReady = true;
+            // Simple test button per GH Pages acceptance criteria
+            if(!document.getElementById('dice-test')){
+              const btn = document.createElement('button');
+              btn.id = 'dice-test'; btn.textContent = 'Roll 1d20 (Test)';
+              btn.className = 'btn-primary';
+              btn.style.display = 'block'; btn.style.margin = '10px auto';
+              btn.addEventListener('click', async ()=>{ try{ await diceBox.roll('1d20'); }catch{} });
+              document.body.appendChild(btn);
+            }
             // Hook roll complete to log results
             if(typeof diceBox.onRollComplete === 'function'){
               diceBox.onRollComplete = (res)=>{
