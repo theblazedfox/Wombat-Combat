@@ -167,23 +167,28 @@
     .battle-canvas-wrap{position:relative;flex:1;overflow:hidden;padding:10px}
     .map-stage{position:relative;transform-origin:top left;display:inline-block}
     #map-canvas,#map-preview{position:absolute;left:0;top:0}
+    #map-preview{pointer-events:none}
+    #map-canvas{cursor:crosshair}
     .map-tokens{position:absolute;left:0;top:0}
     .map-token{position:absolute;width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:#222;background-size:cover;background-position:center;box-shadow:0 2px 6px rgba(0,0,0,.5);cursor:grab}
     .map-token.active{box-shadow:0 0 12px rgba(244,208,63,.9), 0 0 0 3px var(--gold) inset}
     .map-name{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;font-size:.7rem;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
     .map-controls{display:flex;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid rgba(255,255,255,.12)}
+    .map-library{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;flex-wrap:wrap;max-height:140px;overflow:auto}
+    .map-thumb{display:flex;flex-direction:column;gap:4px;align-items:center}
+    .map-thumb img{width:80px;height:60px;object-fit:cover;border:1px solid rgba(255,255,255,.25);border-radius:6px;background:#000}
+    .map-thumb .tiny{max-width:90px;text-align:center}
+    .map-lib-panel{position:absolute;left:10px;right:10px;bottom:10px;background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(244,208,63,.25);border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.35);display:none; z-index:11}
+    .map-lib-panel.open{display:block}
+    .map-lib-tab{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(244,208,63,.3);border-radius:8px;padding:6px 10px;color:var(--gold);font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.35); z-index:10}
 
-    /* Dice Tray (right side) */
-    .dice-panel{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--glass);backdrop-filter:blur(10px);border-left:1px solid rgba(244,208,63,.25);z-index:26;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
+    /* Dice Tray panel */
+    .dice-panel{position:fixed;right:0;top:0;bottom:0;width:520px;background:var(--glass);backdrop-filter:blur(8px);border-left:1px solid rgba(244,208,63,.25);z-index:28;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;overflow:hidden}
     .dice-panel.open{transform:translateX(0)}
-    .dice-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:27;background:var(--glass);backdrop-filter:blur(10px);border:1px solid rgba(244,208,63,.35);border-right:none;border-radius:8px 0 0 8px;padding:8px 10px;font-weight:700;color:var(--gold);cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35)}
     .dice-header{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid rgba(255,255,255,.12)}
-    .dice-tools{display:flex;gap:6px;flex-wrap:wrap}
-    .dice-canvas-wrap{position:relative;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:260px}
-    #dice-container{position:relative;width:100%;height:100%}
-    .dice-controls{display:flex;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid rgba(255,255,255,.12);flex-wrap:wrap}
-    .dice-log{max-height:140px;overflow:auto;margin:6px 10px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(0,0,0,.25)}
-    .dice-log .entry{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:.85rem}
+    .dice-body{position:relative;flex:1}
+    .dice-frame{position:absolute;inset:0;width:100%;height:100%;border:0}
+    .dice-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(244,208,63,.3);border-right:none;border-radius:8px 0 0 8px;padding:8px 10px;color:var(--gold);font-weight:800;cursor:pointer;z-index:27;box-shadow:0 6px 16px rgba(0,0,0,.35)}
 
     /* HP Update Modal */
     .hp-modal {
@@ -539,16 +544,9 @@
     .lib-search-input { min-width: 220px; }
     .condition-search { width: 100%; margin-bottom: 8px; }
   </style>
-  <!-- Dice-Box ES Module (local vendor copy for GitHub Pages) -->
-  <script type="module">
-    import DiceBox from './vendor/dice-box/dice-box.es.min.js';
-    window.DiceBox = DiceBox;
-  </script>
 </head>
 <body>
   <div class="wrap">
-    <!-- GitHub Pages test container for local Dice-Box (no CDN) -->
-    <div id="dice-container" style="width:640px;height:400px;margin:2rem auto;display:none"></div>
     <!-- DM-only Timer -->
     <div id="dm-timer" class="dm-timer" style="display:none">
       <div class="time" id="dm-time">00:00</div>
@@ -604,6 +602,7 @@
           </select>
           <input id="in-ac" type="number" placeholder="AC" />
           <input id="in-hp" type="number" placeholder="HP" />
+          <input id="in-initbonus" type="number" placeholder="Init Bonus (DEX)" />
           <input id="in-img" placeholder="Portrait Image URL (optional)" style="grid-column:1/3" />
           <input id="in-ddb" placeholder="D&D Beyond URL (optional)" style="grid-column:1/3" />
           <div class="row" style="grid-column:1/3;justify-content:flex-end">
@@ -685,6 +684,7 @@
           </select>
           <input id="in-ac" type="number" placeholder="AC" />
           <input id="in-hp" type="number" placeholder="HP" />
+          <input id="in-initbonus" type="number" placeholder="Init Bonus (DEX)" />
           <input id="in-img" placeholder="Portrait Image URL (optional)" style="grid-column:1/3" />
           <input id="in-ddb" placeholder="D&D Beyond URL (optional)" style="grid-column:1/3" />
           <div class="action-bar" style="grid-column:1/3">
@@ -741,7 +741,9 @@
       <div class="battle-tools">
         <button id="bm-tool-pen" class="btn-line btn-small">Pen</button>
         <button id="bm-tool-rect" class="btn-line btn-small">Rect</button>
-        <button id="bm-apply" class="btn-primary btn-small">Apply</button>
+        <button id="bm-tool-move" class="btn-line btn-small">Move Map</button>
+        <button id="bm-undo" class="btn-line btn-small" title="Undo">Undo</button>
+        <button id="bm-redo" class="btn-line btn-small" title="Redo">Redo</button>
       </div>
       <button id="bm-close" class="btn-ghost btn-small" title="Hide">×</button>
     </div>
@@ -763,6 +765,11 @@
       <span class="tiny muted">Zoom</span>
       <input id="bm-zoom" type="range" min="50" max="200" value="100" />
     </div>
+    <div id="map-lib-tab" class="map-lib-tab">Maps ▶</div>
+    <div id="map-lib-panel" class="map-lib-panel">
+      <div class="row" style="justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.12)"><strong>Maps Library</strong><button id="map-lib-close" class="btn-ghost btn-small">×</button></div>
+      <div id="map-library" class="map-library"></div>
+    </div>
   </div>
   <div id="battle-tab" class="battle-tab" title="Show Battle Map" style="display:block">◀ Battle Map</div>
 
@@ -770,36 +777,13 @@
   <div id="dice-panel" class="dice-panel" aria-label="Dice Tray">
     <div class="dice-header">
       <strong style="flex:1">Dice Tray</strong>
-      <div class="dice-tools">
-        <button class="btn-line btn-small" data-dice="d4">d4</button>
-        <button class="btn-line btn-small" data-dice="d6">d6</button>
-        <button class="btn-line btn-small" data-dice="d8">d8</button>
-        <button class="btn-line btn-small" data-dice="d10">d10</button>
-        <button class="btn-line btn-small" data-dice="d12">d12</button>
-        <button class="btn-line btn-small" data-dice="d20">d20</button>
-      </div>
       <button id="dice-close" class="btn-ghost btn-small" title="Hide">×</button>
     </div>
-    <div class="dice-canvas-wrap">
-      <div id="dice-container"></div>
+    <div class="dice-body">
+      <iframe id="dice-frame" class="dice-frame" src="https://d3rivgcgaqw1jo.cloudfront.net/index.html#tab3"></iframe>
     </div>
-    <div class="dice-controls">
-      <div id="dice-picker" class="row" style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn-line btn-small" data-pick="d4">+ d4</button>
-        <button class="btn-line btn-small" data-pick="d6">+ d6</button>
-        <button class="btn-line btn-small" data-pick="d8">+ d8</button>
-        <button class="btn-line btn-small" data-pick="d10">+ d10</button>
-        <button class="btn-line btn-small" data-pick="d12">+ d12</button>
-        <button class="btn-line btn-small" data-pick="d20">+ d20</button>
-        <span id="dice-summary" class="tiny muted" style="margin-left:8px"></span>
-      </div>
-      <div style="flex:1"></div>
-      <button id="dice-clear" class="btn-ghost">Clear</button>
-      <button id="dice-roll" class="btn-primary">Roll</button>
-    </div>
-    <div id="dice-log" class="dice-log" aria-label="Dice results log"></div>
   </div>
-  <div id="dice-tab" class="dice-tab" title="Show Dice Tray" style="display:block">Dice ▶</div>
+  <div id="dice-tab" class="dice-tab" title="Show Dice Tray">Dice Tray ▶</div>
 
   <!-- HP Update Modal -->
   <div id="hp-modal" class="hp-modal">
@@ -814,117 +798,6 @@
   </div>
 
   <script>
-    // ================= DICE TRAY (Local UMD for GH Pages) =================
-    (function initDiceOnReady(){
-      window.addEventListener('DOMContentLoaded', ()=>{
-        // Show the standalone container only if UMD is present
-        if(window.DiceBox){
-          document.getElementById('dice-container').style.display = 'block';
-        }
-        initDiceTray();
-      });
-    })();
-
-    let diceBox = null;
-    let diceReady = false;
-    let picked = [];
-    function initDiceTray(){
-      const panel = document.getElementById('dice-panel');
-      const tab = document.getElementById('dice-tab');
-      const container = document.getElementById('dice-container');
-      const log = document.getElementById('dice-log');
-      const open = localStorage.getItem('diceOpen')==='1';
-      function setOpen(v){ panel.classList.toggle('open', v); tab.style.display = v? 'none':'block'; localStorage.setItem('diceOpen', v?'1':'0'); resizeDice(); }
-      document.getElementById('dice-close').addEventListener('click', ()=> setOpen(false));
-      tab.addEventListener('click', ()=> setOpen(true));
-      setOpen(open);
-
-      // Init engine if available (Dice-Box expects a container)
-      try{
-        const DiceCtor = window.DiceBox;
-        if(DiceCtor){
-          diceBox = new DiceCtor({
-            container: '#dice-container',
-            assetPath: 'assets/',
-            themeColor: '#f4d03f',
-            lightIntensity: 0.9,
-            ambientLight: 0.6,
-            gravity: 9.8,
-            scale: 8,
-            offscreen: false,
-          });
-          diceBox.init().then(()=>{
-            diceReady = true;
-            // Simple test button per GH Pages acceptance criteria
-            if(!document.getElementById('dice-test')){
-              const btn = document.createElement('button');
-              btn.id = 'dice-test'; btn.textContent = 'Roll 1d20 (Test)';
-              btn.className = 'btn-primary';
-              btn.style.display = 'block'; btn.style.margin = '10px auto';
-              btn.addEventListener('click', async ()=>{ try{ await diceBox.roll('1d20'); }catch{} });
-              document.body.appendChild(btn);
-            }
-            // Hook roll complete to log results
-            if(typeof diceBox.onRollComplete === 'function'){
-              diceBox.onRollComplete = (res)=>{
-                try{
-                  const total = Array.isArray(res?.rolls) ? res.rolls.reduce((a,r)=>a+(r.total||0),0) : (res?.total||'');
-                  if(total!=='') logEntry(`[complete] → ${total}`);
-                }catch{}
-              };
-            }
-            resizeDice();
-          }).catch(err=>{ console.warn('Dice init failed', err); });
-        } else if(window.FantasticDice){
-          // fallback to FantasticDice if present
-          diceBox = new window.FantasticDice.Engine({ canvas: container });
-          diceReady = true; resizeDice();
-        }
-      }catch(e){ console.warn('Dice init error', e); }
-
-      function resizeDice(){
-        if(!container) return; const wrap = container.parentElement.getBoundingClientRect();
-        container.style.width = Math.max(100, Math.floor(wrap.width))+'px';
-        container.style.height = Math.max(100, Math.floor(wrap.height))+'px';
-        if(diceBox && diceBox.resize){ try{ diceBox.resize(); }catch{} }
-      }
-      window.addEventListener('resize', resizeDice);
-
-      function logEntry(text){ const div=document.createElement('div'); div.className='entry'; div.textContent=text; log.prepend(div); }
-
-      function updateSummary(){
-        const out = picked.map(x=> x).join(' + ');
-        document.getElementById('dice-summary').textContent = out || 'Pick dice to roll';
-      }
-      document.getElementById('dice-picker').addEventListener('click', (e)=>{
-        const b = e.target.closest('button[data-pick]'); if(!b) return;
-        picked.push(b.dataset.pick);
-        updateSummary();
-      });
-      document.getElementById('dice-clear').addEventListener('click', ()=>{ picked.length=0; updateSummary(); });
-      document.getElementById('dice-roll').addEventListener('click', async ()=>{
-        if(!picked.length) return;
-        const picks = picked.map(s=> '1'+s);
-        const expr = picks.join(' + ');
-        try{
-          if(diceBox && diceBox.roll){
-            if(!diceReady){ await diceBox.init(); diceReady = true; }
-            diceBox.clear?.();
-            if(picks.length <= 1){
-              await diceBox.roll(expr);
-            } else {
-              for(const p of picks){ diceBox.add?.(p); }
-              await diceBox.roll();
-            }
-            logEntry(`${expr} → rolled`);
-          } else {
-            logEntry(`${expr} → rolled`);
-          }
-        }catch(err){ console.warn('Dice roll error', err); logEntry(`${expr} → rolled`); }
-        picked.length=0; updateSummary();
-      });
-      updateSummary();
-    }
     // =====================================================
     // STATE & TYPES
     // =====================================================
@@ -942,7 +815,10 @@
         // kept optional to preserve backward compatibility
         strokes: [], // {tool:'pen'|'rect', points:[{x,y},...], rect:{x,y,w,h}}
         tokens: [],  // {id, creatureId, x, y}
-        zoom: 1
+        zoom: 1,
+        imageData: null, // background image data URL (optional)
+        imageSize: {w:1600,h:1200},
+        library: [] // {id,name,thumb, data}
       }
     };
 
@@ -982,6 +858,8 @@
     // ================= BATTLE MAP =================
     let bmTool = 'pen';
     let bmDrawing = false; let bmPoints = []; let bmRectStart=null;
+    let bmUndo = []; let bmRedo = [];
+    let bmMoveStart=null; // for moving background image
     function bmGetCtx(){ return document.getElementById('map-canvas')?.getContext('2d'); }
     function bmGetPrev(){ return document.getElementById('map-preview')?.getContext('2d'); }
     function bmResize(){
@@ -995,6 +873,15 @@
       ctx.fillStyle = '#f3efe4'; ctx.fillRect(0,0,c.width,c.height);
       ctx.fillStyle = 'rgba(0,0,0,0.04)';
       for(let y=0;y<c.height;y+=32){ ctx.fillRect(0,y,c.width,1); }
+      // background image, if any
+      try{
+        if(store.map?.imageData){
+          const img = new Image(); img.onload = ()=>{ const ox = store.map.imageSize?.x||0, oy=store.map.imageSize?.y||0; ctx.drawImage(img, ox,oy, store.map.imageSize?.w||c.width, store.map.imageSize?.h||c.height); drawStrokes(); };
+          img.src = store.map.imageData; return;
+        }
+      }catch{}
+      drawStrokes();
+      function drawStrokes(){
       // draw strokes
       (store.map?.strokes||[]).forEach(s=>{
         if(s.tool==='pen'){
@@ -1005,14 +892,11 @@
         }
       });
       // tokens are DOM elements layered above; nothing to draw here
+      }
     }
-    function bmApply(){
-      if(bmTool==='pen' && bmPoints.length){ store.map.strokes.push({tool:'pen', points: bmPoints.slice()}); bmPoints.length=0; }
-      if(bmTool==='rect' && bmRectStart){ const r=bmRectStart; const w=r.w, h=r.h; store.map.strokes.push({tool:'rect', rect:{x:r.x,y:r.y,w,h}}); bmRectStart=null; }
-      saveLS(); bmRedraw(); bmPreviewClear();
-    }
+    function bmCommitStroke(stroke){ store.map.strokes.push(stroke); bmUndo.push(stroke); bmRedo.length=0; saveLS(); bmRedraw(); }
     function bmPreviewClear(){ const p=bmGetPrev(); if(!p) return; const c=p.canvas; p.clearRect(0,0,c.width,c.height); }
-    function bmPointerPos(e){ const rect = bmGetCtx().canvas.getBoundingClientRect(); const t=('touches' in e)? e.touches[0]: e; return {x: t.clientX-rect.left, y: t.clientY-rect.top}; }
+    function bmPointerPos(e){ const rect = bmGetCtx().canvas.getBoundingClientRect(); const t=('touches' in e)? e.touches[0]: e; const scale = store.map?.zoom||1; return {x: (t.clientX-rect.left)/scale, y: (t.clientY-rect.top)/scale}; }
     function initBattleMap(){
       const panel = document.getElementById('battle-panel'); const tab=document.getElementById('battle-tab');
       const open = localStorage.getItem('bmOpen')==='1'; panel.classList.toggle('open', open);
@@ -1021,20 +905,79 @@
       tab.addEventListener('click', ()=>{ panel.classList.add('open'); tab.style.display='none'; localStorage.setItem('bmOpen','1'); });
       document.getElementById('bm-tool-pen').addEventListener('click', ()=> bmTool='pen');
       document.getElementById('bm-tool-rect').addEventListener('click', ()=> bmTool='rect');
-      document.getElementById('bm-apply').addEventListener('click', bmApply);
-      document.getElementById('bm-clear-tokens').addEventListener('click', ()=>{ if(!store.map) return; store.map.tokens = []; saveLS(); renderMapTokens(); });
+      document.getElementById('bm-tool-move').addEventListener('click', ()=> bmTool='move');
+      document.getElementById('bm-undo').addEventListener('click', ()=>{ const s=store.map.strokes.pop(); if(s){ bmRedo.push(s); saveLS(); bmRedraw(); }});
+      document.getElementById('bm-redo').addEventListener('click', ()=>{ const s=bmRedo.pop(); if(s){ store.map.strokes.push(s); saveLS(); bmRedraw(); }});
+      document.getElementById('bm-clear-tokens').addEventListener('click', ()=>{
+        if(!store.map) store.map = {strokes:[], tokens:[], zoom:1, imageData:null, imageSize:{w:1600,h:1200,x:0,y:0}, library:[]};
+        // Clear everything: drawings, background image, and tokens
+        store.map.strokes = [];
+        store.map.tokens = [];
+        store.map.imageData = null;
+        store.map.imageSize = {w:1600, h:1200, x:0, y:0};
+        saveLS();
+        bmPreviewClear();
+        bmRedraw();
+        renderMapTokens();
+      });
       const prev = bmGetPrev(); const ctx = bmGetCtx(); if(!ctx||!prev) return;
       // pointer handlers
-      const start=(e)=>{ bmDrawing=true; const p=bmPointerPos(e); if(bmTool==='pen'){ bmPoints=[p]; } else { bmRectStart={x:p.x,y:p.y,w:0,h:0}; } e.preventDefault(); };
-      const move=(e)=>{ if(!bmDrawing) return; const p=bmPointerPos(e); const pv=bmGetPrev(); if(!pv) return; bmPreviewClear(); if(bmTool==='pen'){ bmPoints.push(p); pv.strokeStyle='#111'; pv.lineWidth=3; pv.lineJoin='round'; pv.lineCap='round'; pv.beginPath(); bmPoints.forEach((q,i)=> i?pv.lineTo(q.x,q.y):pv.moveTo(q.x,q.y)); pv.stroke(); } else { const r={x:bmRectStart.x,y:bmRectStart.y,w:p.x-bmRectStart.x,h:p.y-bmRectStart.y}; bmRectStart=r; pv.strokeStyle='#111'; pv.lineWidth=2; pv.strokeRect(r.x,r.y,r.w,r.h);} };
-      const end=()=>{ bmDrawing=false; };
-      const cEl = ctx.canvas; cEl.addEventListener('mousedown', start); cEl.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-      cEl.addEventListener('touchstart', start, {passive:false}); cEl.addEventListener('touchmove', move, {passive:false}); window.addEventListener('touchend', end);
+      const start=(e)=>{ if(e.button!==undefined && e.button!==0) return; const p=bmPointerPos(e); if(bmTool==='move'){ bmMoveStart = {x:p.x,y:p.y}; bmDrawing=true; } else { bmDrawing=true; if(bmTool==='pen'){ bmPoints=[p]; } else if(bmTool==='rect'){ bmRectStart={x:p.x,y:p.y,w:0,h:0}; } } e.preventDefault(); };
+      const move=(e)=>{ const pv=bmGetPrev(); if(!pv) return; const p=bmPointerPos(e); if(bmTool==='move'){ if(!bmDrawing || !bmMoveStart) return; const dx=p.x-bmMoveStart.x, dy=p.y-bmMoveStart.y; if(store.map.imageSize){ store.map.imageSize.x = (store.map.imageSize.x||0)+dx; store.map.imageSize.y = (store.map.imageSize.y||0)+dy; } else { store.map.imageSize={w:1600,h:1200,x:dx,y:dy}; } bmMoveStart = p; bmRedraw(); return; } bmPreviewClear(); if(!bmDrawing){ return; } if(bmTool==='pen'){ bmPoints.push(p); pv.strokeStyle='#111'; pv.lineWidth=3; pv.lineJoin='round'; pv.lineCap='round'; pv.beginPath(); const pts=bmPoints; for(let i=0;i<pts.length;i++){ const q=pts[i]; if(i===0) pv.moveTo(q.x,q.y); else pv.lineTo(q.x,q.y);} pv.stroke(); } else if(bmTool==='rect'){ const r={x:bmRectStart.x,y:bmRectStart.y,w:p.x-bmRectStart.x,h:p.y-bmRectStart.y}; bmRectStart=r; pv.strokeStyle='#111'; pv.lineWidth=2; pv.strokeRect(r.x,r.y,r.w,r.h);} };
+      const end=(e)=>{ if(!bmDrawing) return; bmDrawing=false; if(bmTool==='move'){ bmMoveStart=null; return; } const p=bmPointerPos(e||{}); if(bmTool==='pen' && bmPoints.length){ bmCommitStroke({tool:'pen', points: bmPoints.slice()}); bmPoints.length=0; } if(bmTool==='rect' && bmRectStart){ bmCommitStroke({tool:'rect', rect:{x:bmRectStart.x,y:bmRectStart.y,w:bmRectStart.w,h:bmRectStart.h}}); bmRectStart=null; } bmPreviewClear(); };
+      const cEl = ctx.canvas; cEl.addEventListener('mousedown', start); window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+      cEl.addEventListener('touchstart', start, {passive:false}); window.addEventListener('touchmove', move, {passive:false}); window.addEventListener('touchend', end);
       // zoom
       const z = document.getElementById('bm-zoom'); z.addEventListener('input', ()=>{ const v=Math.max(50,Math.min(200, parseInt(z.value)||100)); store.map.zoom = v/100; bmResize(); }); bmResize();
       // initial draw
       bmRedraw();
+      // image load (map background) and save to library
+      document.getElementById('bm-load').addEventListener('change', (e)=>{
+        const f = e.target.files?.[0]; if(!f) return;
+        if(f.type.startsWith('image/')){
+          const rd=new FileReader(); rd.onload=()=>{ store.map.imageData = rd.result; const img=new Image(); img.onload=()=>{ store.map.imageSize={w:img.naturalWidth,h:img.naturalHeight}; saveLS(); bmRedraw(); }; img.src=rd.result; }; rd.readAsDataURL(f);
+        }else{
+          const rd=new FileReader(); rd.onload=()=>{ try{ const data=JSON.parse(rd.result); if(data && typeof data==='object'){ store.map = Object.assign({strokes:[],tokens:[],zoom:1, imageSize:{w:1600,h:1200}, library:[]}, data); saveLS(); bmResize(); bmRedraw(); renderMapTokens(); renderMapLibrary(); } }catch{ alert('Invalid map JSON'); } }; rd.readAsText(f);
+        }
+        e.target.value='';
+      });
+      document.getElementById('bm-save').addEventListener('click', ()=>{
+        try{
+          const name = prompt('Map name?','Battle Map'); if(!name) return;
+          const canvas = bmGetCtx().canvas; const thumb = document.createElement('canvas'); const tw=160, th=120; thumb.width=tw; thumb.height=th; const tctx=thumb.getContext('2d'); tctx.fillStyle='#000'; tctx.fillRect(0,0,tw,th); tctx.drawImage(canvas, 0,0, tw, th);
+          const entry = {id: uid(), name, thumb: thumb.toDataURL('image/png'), data: JSON.parse(JSON.stringify(store.map))};
+          store.map.library = store.map.library||[]; store.map.library.push(entry);
+          saveLS(); renderMapLibrary();
+        }catch(err){ console.error(err); alert('Failed to save map'); }
+      });
       renderMapTokens();
+      // library panel toggle
+      const libPanel = document.getElementById('map-lib-panel'); const libTab = document.getElementById('map-lib-tab'); const libClose=document.getElementById('map-lib-close');
+      const libOpen = localStorage.getItem('mapLibOpen')==='1'; libPanel.classList.toggle('open', libOpen); libTab.style.display = libOpen? 'none':'block';
+      libTab.addEventListener('click', ()=>{ libPanel.classList.add('open'); libTab.style.display='none'; localStorage.setItem('mapLibOpen','1'); });
+      libClose.addEventListener('click', ()=>{ libPanel.classList.remove('open'); libTab.style.display='block'; localStorage.setItem('mapLibOpen','0'); });
+    }
+    function renderMapLibrary(){
+      try{
+        const el = document.getElementById('map-library'); if(!el) return; el.innerHTML='';
+        const lib = store.map?.library||[];
+        lib.forEach(m=>{
+          const wrap = document.createElement('div'); wrap.className='map-thumb';
+          wrap.innerHTML = `<img alt="${m.name}"><div class="tiny">${m.name}</div><div class="row" style="gap:6px"><button class="btn-line btn-small" data-act="load">Load</button><button class="btn-ghost btn-small" data-act="del">Del</button></div>`;
+          const img = wrap.querySelector('img'); img.src = m.thumb; img.title = m.name;
+          wrap.addEventListener('click', (e)=>{
+            const act = e.target.closest('button')?.dataset.act; if(!act) return;
+            if(act==='load'){
+              store.map = Object.assign({strokes:[],tokens:[],zoom:1, imageSize:{w:1600,h:1200}, library:store.map.library}, m.data);
+              saveLS(); bmResize(); bmRedraw(); renderMapTokens();
+            }
+            if(act==='del'){
+              store.map.library = lib.filter(x=>x.id!==m.id); saveLS(); renderMapLibrary();
+            }
+          });
+          el.appendChild(wrap);
+        });
+      }catch{}
     }
     function renderMapTokens(){
       const wrap = document.getElementById('map-tokens'); if(!wrap) return; wrap.innerHTML='';
@@ -1499,13 +1442,14 @@
           <div class="lib-left">
             <img class="avatar" src="${cre.imageUrl||'https://via.placeholder.com/64x64?text=?'}" alt="" onerror="this.style.display='none'"/>
             <div class="col">
-              <div class="row" style="gap:6px">
+          <div class="row" style="gap:6px">
                 <strong>${cre.name}</strong>
                 <span class="type-pill ${cre.type[0].toUpperCase()}">${cre.type}</span>
               </div>
               <div class="row tiny" style="gap:10px">
                 ${Number.isFinite(cre.hp)?`<span class="chip">HP ${cre.hp}/${cre.maxHp||cre.hp}</span>`:''}
                 ${Number.isFinite(cre.ac)?`<span class="chip">AC ${cre.ac}</span>`:''}
+            ${Number.isFinite(cre.initBonus)?`<span class="chip">Init +${cre.initBonus}</span>`:''}
                 ${cre.ddbUrl?`<span class="chip">DDB</span>`:''}
                 ${cre.sheetImageData && cre.type!=='player'?`<span class="chip">Sheet</span>`:''}
               </div>
@@ -1560,12 +1504,21 @@
       saveLS(); renderLibrary();
     }
 
+    function rollD20(){ return Math.floor(Math.random()*20)+1; }
+
     function promptAddFromLibrary(cre){
-      const initRaw = prompt(`Initiative for ${cre.name}?`, '10'); if(initRaw===null) return;
-      const init = Number.parseInt(initRaw||''); if(!Number.isFinite(init)) return;
       const copy = JSON.parse(JSON.stringify(cre));
       copy.id = uid(); // ensure unique id per encounter instance
-      copy.init = init;
+      // Auto-roll initiative for non-players using stored bonus; players still prompted
+      if(copy.type !== 'player'){
+        const bonus = Number.parseInt(copy.initBonus||'');
+        const b = Number.isFinite(bonus) ? bonus : 0;
+        copy.init = rollD20() + b;
+      } else {
+        const initRaw = prompt(`Initiative for ${cre.name}?`, '10'); if(initRaw===null) return;
+        const init = Number.parseInt(initRaw||''); if(!Number.isFinite(init)) return;
+        copy.init = init;
+      }
       if(copy.maxHp==null && copy.hp!=null) copy.maxHp = copy.hp;
       store.encounter.push(copy); sortEncounter(); saveLS(); renderEncounter();
     }
@@ -1585,11 +1538,13 @@
       const hp = Number.parseInt(root.querySelector('#in-hp')?.value||'');
       const ac = Number.parseInt(root.querySelector('#in-ac')?.value||'');
       const img = root.querySelector('#in-img')?.value.trim()||'';
+      const initBonus = Number.parseInt(root.querySelector('#in-initbonus')?.value||'');
       const ddb = root.querySelector('#in-ddb')?.value.trim()||'';
       /** @type {Creature} */
       const creature={id:uid(),name,type,imageUrl:img||undefined, ddbUrl: ddb||undefined};
       if(Number.isFinite(hp)){ creature.hp=hp; creature.maxHp=hp; }
       if(Number.isFinite(ac)){ creature.ac=ac; }
+      if(Number.isFinite(initBonus)){ creature.initBonus=initBonus; }
       ensureFolderSelected();
       const folder = getFolderById(currentFolderId) || store.libraryFolders[0];
       if(!folder){ alert('No library folder available. Create one first.'); return; }
@@ -1598,6 +1553,7 @@
       const hpEl = root.querySelector('#in-hp'); if(hpEl) hpEl.value='';
       const acEl = root.querySelector('#in-ac'); if(acEl) acEl.value='';
       const imgEl = root.querySelector('#in-img'); if(imgEl) imgEl.value='';
+      const ibEl = root.querySelector('#in-initbonus'); if(ibEl) ibEl.value='';
       const ddbEl = root.querySelector('#in-ddb'); if(ddbEl) ddbEl.value='';
     }
 
@@ -1613,7 +1569,7 @@
           const data = JSON.parse(r.result);
           if(data && typeof data === 'object' && data.name){
             const folder = getFolderById(currentFolderId) || store.libraryFolders[0];
-            const fresh = {id:uid(), name:data.name, type:data.type||'enemy', ac:data.ac, hp:data.hp, maxHp:data.maxHp||data.hp, imageUrl:data.imageUrl, sheetImageData:data.sheetImageData, ddbUrl:data.ddbUrl};
+            const fresh = {id:uid(), name:data.name, type:data.type||'enemy', ac:data.ac, hp:data.hp, maxHp:data.maxHp||data.hp, imageUrl:data.imageUrl, sheetImageData:data.sheetImageData, ddbUrl:data.ddbUrl, initBonus:data.initBonus};
             folder.items.push(fresh);
             saveLS(); renderLibrary();
           } else {
@@ -1644,11 +1600,12 @@
             </div>
             <div class="col">
               <strong>${c.name}</strong>
-              <div class="row tiny" style="gap:10px">
+             <div class="row tiny" style="gap:10px">
                 ${isCurrentTurn?`<span class="chip now-chip">NOW</span>`:''}
                 <span class="chip">Init ${c.init ?? '-'}</span>
                 ${Number.isFinite(c.ac)?`<span class="chip">AC ${c.ac}</span>`:''}
                 ${Number.isFinite(c.hp)?`<span class="chip">HP ${c.hp}/${c.maxHp||c.hp}`:''}
+                 ${Number.isFinite(c.initBonus)?`<span class="chip">Bonus +${c.initBonus}</span>`:''}
               </div>
               <div class="condition-dropdown">
                 <button class="condition-dropdown-btn" data-creature-id="${c.id}">
@@ -1670,6 +1627,7 @@
           </div>
           <div class="row">
             <input class="num" type="number" value="${c.init ?? ''}" placeholder="Init" data-k="init" />
+            <input class="num" type="number" value="${Number.isFinite(c.initBonus)?c.initBonus:''}" placeholder="Init Bonus" title="Initiative (DEX) Bonus" data-k="initBonus" />
             ${Number.isFinite(c.hp)?`<input class="num" type="number" value="${c.hp}" data-k="hp" title="HP" />`:''}
             <button class="btn-small btn-line" data-act="save">Save to Library</button>
             <button class="btn-small btn-ghost" data-act="rm">Remove</button>
@@ -1683,7 +1641,9 @@
         const nameContainer = row.querySelector('.col');
         renderConditionLabels(nameContainer, c);
         row.addEventListener('input', (e)=>{
-          const inp = e.target; if(!(inp instanceof HTMLInputElement)) return; const k = inp.dataset.k; if(!k) return; c[k] = Number.parseInt(inp.value)||0; if(k==='hp' && c.maxHp==null) c.maxHp=c.hp; sortEncounter(); renderEncounter();
+          const inp = e.target; if(!(inp instanceof HTMLInputElement)) return; const k = inp.dataset.k; if(!k) return; const val = Number.parseInt(inp.value);
+          if(Number.isFinite(val)) { c[k] = val; } else { delete c[k]; }
+          if(k==='hp' && c.maxHp==null) c.maxHp=c.hp; sortEncounter(); renderEncounter();
         });
         row.addEventListener('click', (e)=>{
           const act = e.target.closest('button')?.dataset.act; if(!act) return;
@@ -1803,7 +1763,7 @@
     function toLibrary(c){
       // Save creature to current folder (keeps sheetImageData)
       const folder = getFolderById(currentFolderId) || store.libraryFolders[0];
-      const base = {id:uid(), name:c.name, type:c.type, ac:c.ac, hp:c.hp, maxHp:c.maxHp, imageUrl:c.imageUrl, sheetImageData:c.sheetImageData};
+      const base = {id:uid(), name:c.name, type:c.type, ac:c.ac, hp:c.hp, maxHp:c.maxHp, imageUrl:c.imageUrl, sheetImageData:c.sheetImageData, initBonus:c.initBonus};
       folder.items.push(base); saveLS(); renderLibrary();
     }
 
@@ -2451,6 +2411,20 @@ body{margin:0;background:transparent;color:#e0e0e0;font-family:Inter,system-ui,S
       showSources(vis!== '0');
     })();
     initBattleMap();
+
+  // Dice Tray init
+  (function initDice(){
+    const panel = document.getElementById('dice-panel');
+    const tab = document.getElementById('dice-tab');
+    const frame = document.getElementById('dice-frame');
+    const open = localStorage.getItem('diceOpen')==='1';
+    function setOpen(v){ panel.classList.toggle('open', v); tab.style.display = v? 'none':'block'; localStorage.setItem('diceOpen', v?'1':'0'); }
+    setOpen(open);
+    document.getElementById('dice-close').addEventListener('click', ()=> setOpen(false));
+    tab.addEventListener('click', ()=> setOpen(true));
+    // try ensure Dice Picker tab by hash (site supports #tab3)
+    try{ if(frame){ const u = new URL(frame.src); u.hash = '#tab3'; frame.src = u.toString(); } }catch{}
+  })();
   </script>
 </body>
 </html>
